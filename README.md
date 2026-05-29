@@ -44,18 +44,24 @@ All free, no API keys:
 
 ## Run it
 
-It's one self-contained `gripcast.html` — open it over `http://` (geolocation
-and `fetch` need a served origin, not `file://`):
+GripCast is now a **Vite + TypeScript + Svelte** app.
 
 ```bash
-python3 -m http.server 4558
-# then open http://localhost:4558/gripcast.html
+npm install
+npm run dev        # http://localhost:4561
+npm run build      # static bundle in dist/
+npm run preview    # serve the built bundle
 ```
 
-Or use the helper:
+The original single-file prototype is preserved at
+[`legacy/gripcast.html`](legacy/gripcast.html) for reference.
 
-```bash
-./serve.sh
+### Project layout
+```
+src/
+  lib/      score, sky, weather, geo, i18n, units, stores (typed logic)
+  components/  Fx, Clouds, MapView, TrendsGraph, SearchModal
+  App.svelte   orchestration + sky/clock/popups
 ```
 
 ## License
