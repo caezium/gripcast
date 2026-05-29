@@ -20,7 +20,26 @@ file that each step overwrote, so this log is the record of that evolution.
 ## v0.4 — Track browser
 - Featured circuits + recents (localStorage), grouped suggestions, keyboard nav.
 
-## v0.5 — Full redesign (current)
+## v0.6 — Internationalization, time model & data-viz polish (current)
+- **i18n:** 8 languages (en/es/fr/de/it/pt/ja/zh), auto-detected from the
+  browser on first visit and saved; globe switcher (top-left). All UI chrome,
+  taglines and phase labels translate live.
+- **Timezone-aware time model:** clock shows the *track's* local time + tz
+  abbreviation (resolves the mismatch when scoring a far-away circuit).
+- **Hourly time model:** on-demand hourly fetch per day; an hour scrubber lets
+  you check any hour of any day; top-right counts down to the day's next
+  **peak grip window** (live), or shows the day's peak hour in history view.
+- **History + trends:** past window extended to 60 days; an SVG trends chart
+  (grip line + temp + precip) gives the "shape" at a glance, clickable per day.
+- **Backdrop:** faster wind-driven cloud drift, heavier/visible rain, a
+  temperature warm/cool sky tint, and mood-tinted score text (green→amber→steel,
+  distinct wet styling).
+- **Search:** themed to flip with the sky (light/dark); removed the redundant
+  top search button; "near me" now lists nearby circuits with an explicit
+  "my current location" option; boots to your last place; Overpass results
+  cached to localStorage; map loading indicator.
+
+## v0.5 — Full redesign
 - **Search:** Photon type-ahead, results grouped **tracks-first then places**
   (collapsible), Overpass for circuits near a typed city (karting ranked first),
   `lat, lon` input, multi-mirror Overpass with race + cache for resilience.
