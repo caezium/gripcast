@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.8 — Vite/Svelte migration + information design
+- **P1:** migrated the single-file prototype to **Vite + TypeScript + Svelte**
+  (typed `lib/`, Svelte `components/`, reactive store + derived view model) at
+  full feature parity. Original kept at `legacy/gripcast.html`.
+- **P2 (Dark Sky principles):** context subtag surfaces the limiting/lifting
+  factor ("rain is killing grip" / "cool, dry & calm — ideal"); **wind-direction
+  arrow** next to wind speed; **rain timeline** ("dry until 14:00") shown only
+  when rain is in the day; categorical precip (light/moderate/heavy) over bare
+  mm; **forecast-confidence fade** beyond +7 days in the trends graph.
+
+
 The build progressed through these phases. Earlier iterations lived in a single
 file that each step overwrote, so this log is the record of that evolution.
 

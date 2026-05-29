@@ -51,6 +51,14 @@ export function verdict(s: number, wet: number): { tagKey: string; mood: Mood } 
   return { tagKey: "tough", mood: "low" };
 }
 
+/** rough precip category — avoids false precision (Dark Sky principle) */
+export function precipCat(mm: number): "light" | "moderate" | "heavy" | null {
+  if (mm < 0.1) return null;
+  if (mm < 1) return "light";
+  if (mm < 4) return "moderate";
+  return "heavy";
+}
+
 /** the dominant factor holding the score back (or lifting it) — for context emphasis */
 function limiting(w: W, wet: number, s: number): string {
   if (wet >= 0.5) return "wet";

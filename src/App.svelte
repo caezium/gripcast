@@ -6,12 +6,13 @@
   import { fmt } from "./lib/units";
   import { trackNow, pad, lsGet } from "./lib/util";
   import { dayW, hourW } from "./lib/weather";
-  import { scoreOf } from "./lib/score";
+  import { scoreOf, precipCat } from "./lib/score";
   import { computeSky, type SkyOut } from "./lib/sky";
   import Clouds from "./components/Clouds.svelte";
   import Fx from "./components/Fx.svelte";
   import SearchModal from "./components/SearchModal.svelte";
   import TrendsGraph from "./components/TrendsGraph.svelte";
+  import RainTimeline from "./components/RainTimeline.svelte";
 
   $: tr = $trStore;
   $: tg = $tgStore;
@@ -70,11 +71,14 @@
     [tr("cloud"), $view.w.cloud != null ? Math.round($view.w.cloud) + "%" : "—"],
     [tr("wind"), $fmt.speed($view.w.wind)],
     [tr("gusts"), $fmt.speed($view.w.gust)],
-    [tr("precip"), $view.w.precip != null ? $view.w.precip.toFixed(1) + " mm" : "—"],
+    [tr("precip"), precipLabel($view.w.precip)],
     [tr("pressure"), $view.w.pressure != null ? Math.round($view.w.pressure) + " hPa" : "—"],
   ] : [];
   $: dryScore = $view ? scoreOf($view.w, "dry").s10.toFixed(1) : "";
   $: wetScore = $view ? scoreOf($view.w, "wet").s10.toFixed(1) : "";
+  $: curHourly = $app.selDate ? $app.hourly[$app.selDate] : null;
+  $: fromHour = $view && $view.live ? trackNow($app.tzOffset).h : ($view ? $view.selHour : 0);
+  function precipLabel(mm: number | null | undefined) { if (mm == null) return "—"; const c = precipCat(mm); return c ? tr(c) + " · " + mm.toFixed(1) + " mm" : mm.toFixed(1) + " mm"; }
 
   function onHour(e: Event) { setHour(+(e.target as HTMLInputElement).value); }
   function dayScore(i: number) { return $app.data ? scoreOf(dayW($app.data, i)).s10 : 0; }
@@ -140,15 +144,17 @@
     {/key}
     <div class="tagline">{tagline}</div>
     {#if $view}
+      <div class="subtag">{tg("why", $view.score.whyKey)}</div>
       <div class="stats">
         <span><span class="lab">{$view.live ? tr("nowLbl") : pad($app.selHour) + ":00"}</span> <b>{$fmt.temp($view.w.feels)}</b></span>
         <span class="det" bind:this={condDetEl} on:click={toggleDetails} role="button" tabindex="0"><b>{$view.score.label}</b></span>
-        <span><span class="lab">{tr("wind")}</span> <b>{$fmt.speed($view.w.wind)}</b></span>
+        <span><span class="lab">{tr("wind")}</span> <b>{$fmt.speed($view.w.wind)}</b>{#if $view.w.dir != null}<span class="wdir" style="transform:rotate({($view.w.dir + 180) % 360}deg)">↑</span>{/if}</span>
       </div>
       <div class="scrub show">
         <input type="range" min="0" max="23" step="1" value={$app.selHour} on:input={onHour} aria-label="hour" />
         <div class="lab"><span>{$view.live ? tr("nowLbl") : pad($app.selHour) + ":00"}</span><span class="nowbtn" on:click={setLive} role="button" tabindex="0">{tr("scrubNow")}</span></div>
       </div>
+      <RainTimeline hd={curHourly} {fromHour} live={$view.live} />
     {/if}
   </div>
 </div>

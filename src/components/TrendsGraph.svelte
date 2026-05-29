@@ -30,6 +30,7 @@
   const yT = (v: number) => T + (B - T) * (1 - Math.max(0, Math.min(1, (v - tMin) / tr)));
   $: step = Math.max(1, Math.ceil(n / 8));
   $: todayX = x(data.todayIdx);
+  $: confX = x(Math.min(data.todayIdx + 7, n - 1));
   $: labels = data.daily.time.map((ds, i) => ({ i, show: i % step === 0, x: x(i), txt: new Date(ds + "T00:00").toLocaleDateString($lang, { month: "short", day: "numeric" }) }));
 </script>
 
@@ -44,6 +45,10 @@
   <path d={area} fill="rgba(127,176,224,.16)" />
   <path d={tline} fill="none" stroke="rgba(230,170,90,.85)" stroke-width="1.3" />
   <path d={line} fill="none" stroke="rgb(127,176,224)" stroke-width="2" />
+  {#if confX < R - 2}
+    <rect x={confX} y={T} width={R - confX} height={B - T} fill="rgba(128,128,128,.06)" />
+    <line x1={confX} y1={T} x2={confX} y2={B} stroke="currentColor" stroke-dasharray="2 3" opacity="0.35" />
+  {/if}
   <line x1={todayX} y1={T} x2={todayX} y2={B} stroke="currentColor" stroke-dasharray="3 3" opacity="0.6" />
   {#if selI >= 0}<circle cx={x(selI)} cy={yS(scores[selI])} r="4" fill="rgb(127,176,224)" stroke="#fff" stroke-width="1.5" />{/if}
   {#each labels as l}{#if l.show}<text x={l.x} y={B + 50} text-anchor="middle" font-size="8" fill="currentColor">{l.txt}</text>{/if}{/each}
