@@ -1,0 +1,12 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# editor / tooling
+.vscode/
+.idea/
+*.log
+
+# local dev
+.cache/
+node_modules/
