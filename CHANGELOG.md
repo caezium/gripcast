@@ -14,6 +14,11 @@
   weather into engine tuning; **units toggle** (°C/°F, km/h/mph, auto from
   locale); **track-temp estimate** + cold-set **tyre-pressure** nudge;
   **best session window** today from the hourly score. All in the details drop-up.
+- **P4 (routing + PWA):** shareable deep links (`#/lat,lon/date?n=Name`) that
+  read on load and write as you browse; "copy link" in the quick menu; installable
+  **PWA** (manifest + icon) with an offline **service worker** (app shell & tiles
+  cache-first, APIs network-first with cache fallback so the last conditions show
+  trackside with no signal).
 
 
 The build progressed through these phases. Earlier iterations lived in a single

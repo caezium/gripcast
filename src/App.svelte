@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { get } from "svelte/store";
   import { app, view, loadPlace, setLive, selectDay, setHour, recentsStore, FEATURED } from "./lib/stores";
-  import { t as trStore, tg as tgStore, lang, setLang, LANGS, HINT_RECENTS } from "./lib/i18n";
+  import { t as trStore, tg as tgStore, lang, setLang, LANGS, HINT_RECENTS, SHARE_LABEL, COPIED_LABEL } from "./lib/i18n";
   import { fmt, toggleUnits } from "./lib/units";
   import { airDensity, jetting, trackTemp, tyreArrow, bestWindow } from "./lib/karting";
   import { trackNow, pad, lsGet } from "./lib/util";
@@ -113,11 +113,57 @@
   function toggleTimeline() { timelineOpen = !timelineOpen; }
   function toggleGraph() { if ($app.data) graphOpen = !graphOpen; }
 
+  // ---- deep-link routing (#/lat,lon/date?n=Name) ----
+  function parseHash() {
+    const h = location.hash.replace(/^#\/?/, "");
+    if (!h) return null;
+    const [path, query] = h.split("?");
+    const [coords, date] = path.split("/");
+    const m = coords && coords.match(/^(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/);
+    if (!m) return null;
+    const p = new URLSearchParams(query || "");
+    return { lat: +m[1], lon: +m[2], date: date || null, name: decodeURIComponent(p.get("n") || "track") };
+  }
+  function buildHash(s: typeof $app) {
+    if (s.lat == null) return "";
+    return `#/${s.lat.toFixed(4)},${s.lon.toFixed(4)}/${s.selDate || ""}?n=${encodeURIComponent(s.name)}`;
+  }
+  let lastHash = "";
+  function updateHash() {
+    const s = get(app); const h = buildHash(s);
+    if (h && h !== location.hash) { lastHash = h; history.replaceState(null, "", h); }
+  }
+  $: { void $app.lat; void $app.lon; void $app.selDate; void $app.name; updateHash(); }
+  async function onHashChange() {
+    if (location.hash === lastHash) return;
+    const r = parseHash(); if (!r) return;
+    const s = get(app);
+    if (s.lat != null && Math.abs(s.lat - r.lat) < 1e-4 && Math.abs(s.lon - r.lon) < 1e-4) return;
+    await loadPlace(r.lat, r.lon, r.name);
+    if (r.date) { const idx = get(app).data?.daily.time.indexOf(r.date) ?? -1; if (idx >= 0) selectDay(idx); }
+  }
+
+  let copied = false;
+  function shareLink() {
+    quickOpen = false;
+    try { navigator.clipboard?.writeText(location.href); } catch {}
+    copied = true; setTimeout(() => (copied = false), 1600);
+  }
+
   onMount(() => {
     const iv = setInterval(updateClock, 1000); updateClock();
-    const last = lsGet<{ lat: number; lon: number; name: string }>("gc_last");
-    if (last) loadPlace(last.lat, last.lon, last.name);
-    return () => clearInterval(iv);
+    (async () => {
+      const r = parseHash();
+      if (r) {
+        await loadPlace(r.lat, r.lon, r.name);
+        if (r.date) { const idx = get(app).data?.daily.time.indexOf(r.date) ?? -1; if (idx >= 0) selectDay(idx); }
+      } else {
+        const last = lsGet<{ lat: number; lon: number; name: string }>("gc_last");
+        if (last) loadPlace(last.lat, last.lon, last.name);
+      }
+    })();
+    addEventListener("hashchange", onHashChange);
+    return () => { clearInterval(iv); removeEventListener("hashchange", onHashChange); };
   });
 </script>
 
@@ -175,6 +221,7 @@
     <div class="head">{tr("jumpTo")}</div>
     <div class="row" on:click={openSearch} role="button" tabindex="0"><span class="ic">🔍</span><span class="nm">{tr("searchPlaces")}</span></div>
     <div class="row" on:click={geoFromQuick} role="button" tabindex="0"><span class="ic">◎</span><span class="nm">{tr("nearMe")}</span></div>
+    {#if $app.lat != null}<div class="row" on:click={shareLink} role="button" tabindex="0"><span class="ic">🔗</span><span class="nm">{SHARE_LABEL[$lang] || SHARE_LABEL.en}</span></div>{/if}
     {#if $recentsStore.length}<div class="head">{tr("recent")}</div>{#each $recentsStore as r}<div class="row" on:click={() => pick(r)} role="button" tabindex="0"><span class="ic">◷</span><span class="nm">{r.name}</span></div>{/each}{/if}
     <div class="head">{tr("featured")}</div>{#each FEATURED.slice(0, 5) as f}<div class="row" on:click={() => pick(f)} role="button" tabindex="0"><span class="ic">🏁</span><span class="nm">{f.name}</span><span class="sub">{f.sub}</span></div>{/each}
   </div>
@@ -232,5 +279,7 @@
     {/each}
   </div>
 {/if}
+
+{#if copied}<div class="toast">{COPIED_LABEL[$lang] || COPIED_LABEL.en}</div>{/if}
 
 <SearchModal bind:this={searchComp} open={searchOpen} on:select={onSelect} on:close={() => (searchOpen = false)} />

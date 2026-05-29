@@ -59,6 +59,15 @@ export const HINT_RECENTS: Record<string, string> = {
   ja: "名前をタップで履歴", zh: "点名称看最近",
 };
 
+export const SHARE_LABEL: Record<string, string> = {
+  en: "copy link", es: "copiar enlace", fr: "copier le lien", de: "Link kopieren",
+  it: "copia link", pt: "copiar link", ja: "リンクをコピー", zh: "复制链接",
+};
+export const COPIED_LABEL: Record<string, string> = {
+  en: "link copied ✓", es: "enlace copiado ✓", fr: "lien copié ✓", de: "Link kopiert ✓",
+  it: "link copiato ✓", pt: "link copiado ✓", ja: "コピーしました ✓", zh: "已复制 ✓",
+};
+
 export const LANGS: [string, string][] = [
   ["en", "English"], ["es", "Español"], ["fr", "Français"], ["de", "Deutsch"],
   ["it", "Italiano"], ["pt", "Português"], ["ja", "日本語"], ["zh", "中文"],

@@ -1,0 +1,14 @@
+{
+  "name": "GripCast — track-day conditions",
+  "short_name": "GripCast",
+  "description": "Track-day grip & conditions score for any kart circuit, anywhere.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#15151f",
+  "theme_color": "#15151f",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
