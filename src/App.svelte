@@ -3,7 +3,8 @@
   import { get } from "svelte/store";
   import { app, view, loadPlace, setLive, selectDay, setHour, recentsStore, FEATURED } from "./lib/stores";
   import { t as trStore, tg as tgStore, lang, setLang, LANGS, HINT_RECENTS } from "./lib/i18n";
-  import { fmt } from "./lib/units";
+  import { fmt, toggleUnits } from "./lib/units";
+  import { airDensity, jetting, trackTemp, tyreArrow, bestWindow } from "./lib/karting";
   import { trackNow, pad, lsGet } from "./lib/util";
   import { dayW, hourW } from "./lib/weather";
   import { scoreOf, precipCat } from "./lib/score";
@@ -79,6 +80,12 @@
   $: curHourly = $app.selDate ? $app.hourly[$app.selDate] : null;
   $: fromHour = $view && $view.live ? trackNow($app.tzOffset).h : ($view ? $view.selHour : 0);
   function precipLabel(mm: number | null | undefined) { if (mm == null) return "—"; const c = precipCat(mm); return c ? tr(c) + " · " + mm.toFixed(1) + " mm" : mm.toFixed(1) + " mm"; }
+  // karting tools
+  $: daylight = $view ? ["day", "golden", "dawn"].includes($view.phase) : false;
+  $: air = $view && $view.w.pressure != null ? airDensity($view.w.temp, $view.w.pressure, $view.w.humidity) : null;
+  $: jet = air ? jetting(air.relPct) : null;
+  $: tTrack = $view ? trackTemp($view.w.temp, $view.w.cloud, daylight) : null;
+  $: bWindow = curHourly ? bestWindow(curHourly, fromHour) : null;
 
   function onHour(e: Event) { setHour(+(e.target as HTMLInputElement).value); }
   function dayScore(i: number) { return $app.data ? scoreOf(dayW($app.data, i)).s10 : 0; }
@@ -131,6 +138,7 @@
   <div class="topbar">
     <div class="topleft">
       <button class="globe" bind:this={globeEl} on:click={toggleLang}>🌐 {$lang.toUpperCase()}</button>
+      <button class="unit" on:click={toggleUnits} title="units">{$fmt.tUnit}</button>
       <span class="date">{dateLabel || "—"}</span>
     </div>
     <div class="mid">{$view ? phaseLabel : ""}</div>
@@ -187,6 +195,14 @@
         <div class="c" class:active={$view.w.precip < 0.1}><div class="n">{dryScore}</div><div class="t">{tr("dryLine")}</div></div>
         <div class="c" class:active={$view.w.precip >= 0.1}><div class="n">{wetScore}</div><div class="t">{tr("wetLine")}</div></div>
       </div>
+      {#if air && jet}
+        <div class="da">
+          <div class="row1"><span>{tr("airDensity")}</span><span class="big">{air.relPct.toFixed(0)}%</span></div>
+          <div class="jet">{tr("jetting")}: <b>{tr(jet.dir)}</b> ({jet.d > 0 ? "+" : ""}{jet.d.toFixed(1)}%) · DA {Math.round(air.da)} m</div>
+          <div class="jet">{tr("trackTemp")} ≈ <b>{$fmt.temp(tTrack)}</b> · {tr("tyrePressure")} <b>{tyreArrow(tTrack ?? 20)}</b></div>
+          {#if bWindow}<div class="jet">{tr("bestWindow")}: <b>{pad(bWindow.start)}:00–{pad(bWindow.end)}:00</b></div>{/if}
+        </div>
+      {/if}
     </div>
   </div>
 {/if}

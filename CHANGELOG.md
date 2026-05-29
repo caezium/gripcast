@@ -9,6 +9,11 @@
   arrow** next to wind speed; **rain timeline** ("dry until 14:00") shown only
   when rain is in the day; categorical precip (light/moderate/heavy) over bare
   mm; **forecast-confidence fade** beyond +7 days in the trends graph.
+- **P3 (karting tools):** **density-altitude + jetting guide** (relative air
+  density %, richer/leaner direction vs ISA baseline, DA in metres) — turns
+  weather into engine tuning; **units toggle** (°C/°F, km/h/mph, auto from
+  locale); **track-temp estimate** + cold-set **tyre-pressure** nudge;
+  **best session window** today from the hourly score. All in the details drop-up.
 
 
 The build progressed through these phases. Earlier iterations lived in a single
