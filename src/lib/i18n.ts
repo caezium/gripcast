@@ -68,6 +68,19 @@ export const COPIED_LABEL: Record<string, string> = {
   it: "link copiato ✓", pt: "link copiado ✓", ja: "コピーしました ✓", zh: "已复制 ✓",
 };
 
+export const COMPARE_LABEL: Record<string, string> = {
+  en: "compare…", es: "comparar…", fr: "comparer…", de: "vergleichen…",
+  it: "confronta…", pt: "comparar…", ja: "比較…", zh: "对比…",
+};
+export const NEXTGOOD_LABEL: Record<string, string> = {
+  en: "next strong day", es: "próximo buen día", fr: "prochain bon jour", de: "nächster guter Tag",
+  it: "prossimo giorno buono", pt: "próximo bom dia", ja: "次の好条件日", zh: "下一个好天",
+};
+export const NOTIFY_LABEL: Record<string, string> = {
+  en: "notify me", es: "avisarme", fr: "me prévenir", de: "benachrichtigen",
+  it: "avvisami", pt: "avisar-me", ja: "通知する", zh: "提醒我",
+};
+
 export const LANGS: [string, string][] = [
   ["en", "English"], ["es", "Español"], ["fr", "Français"], ["de", "Deutsch"],
   ["it", "Italiano"], ["pt", "Português"], ["ja", "日本語"], ["zh", "中文"],

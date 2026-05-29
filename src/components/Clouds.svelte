@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { reducedMotion } from "../lib/a11y";
   export let count = 4;
   export let wind = 6;
   export let color = "150,156,170";
@@ -19,10 +20,12 @@
       b.style.opacity = (0.26 + Math.random() * 0.2).toFixed(2);
       b.style.filter = `url(#cw${i % 3}) blur(${(11 + Math.random() * 5).toFixed(1)}px)`;
       const dx = 180 + Math.random() * 240, d = dur * (0.8 + Math.random() * 0.5);
-      b.animate(
-        [{ transform: `translateX(${-dx}px)` }, { transform: `translateX(${dx}px)` }],
-        { duration: d * 1000, direction: "alternate", iterations: Infinity, easing: "linear", delay: -Math.random() * d * 1000 }
-      );
+      if (!reducedMotion) {
+        b.animate(
+          [{ transform: `translateX(${-dx}px)` }, { transform: `translateX(${dx}px)` }],
+          { duration: d * 1000, direction: "alternate", iterations: Infinity, easing: "linear", delay: -Math.random() * d * 1000 }
+        );
+      }
       layer.appendChild(b);
     }
   }

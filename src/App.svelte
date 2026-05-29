@@ -2,9 +2,11 @@
   import { onMount } from "svelte";
   import { get } from "svelte/store";
   import { app, view, loadPlace, setLive, selectDay, setHour, recentsStore, FEATURED } from "./lib/stores";
-  import { t as trStore, tg as tgStore, lang, setLang, LANGS, HINT_RECENTS, SHARE_LABEL, COPIED_LABEL } from "./lib/i18n";
+  import { t as trStore, tg as tgStore, lang, setLang, LANGS, HINT_RECENTS, SHARE_LABEL, COPIED_LABEL, COMPARE_LABEL, NEXTGOOD_LABEL, NOTIFY_LABEL } from "./lib/i18n";
   import { fmt, toggleUnits } from "./lib/units";
   import { airDensity, jetting, trackTemp, tyreArrow, bestWindow } from "./lib/karting";
+  import { fetchWeather, liveW } from "./lib/weather";
+  import { activate } from "./lib/a11y";
   import { trackNow, pad, lsGet } from "./lib/util";
   import { dayW, hourW } from "./lib/weather";
   import { scoreOf, precipCat } from "./lib/score";
@@ -90,6 +92,8 @@
   function onHour(e: Event) { setHour(+(e.target as HTMLInputElement).value); }
   function dayScore(i: number) { return $app.data ? scoreOf(dayW($app.data, i)).s10 : 0; }
   function fmtDay(ds: string) { return new Date(ds + "T00:00").toLocaleDateString($lang, { day: "numeric", month: "short" }); }
+  function fmtFullDay(ds: string) { if (!ds) return ""; const d = new Date(ds + "T00:00"); if (isNaN(+d)) return ds; return d.toLocaleDateString($lang, { weekday: "short", day: "numeric", month: "short" }); }
+  $: canNotify = typeof Notification !== "undefined";
 
   function toggleQuick() { detailsOpen = false; langOpen = false; if (quickOpen) { quickOpen = false; return; } const r = placeEl.getBoundingClientRect(); quickPos = { left: Math.max(16, r.left + r.width / 2 - 160), top: r.bottom + 10 }; quickOpen = true; }
   function toggleDetails() { if (!$view) return; quickOpen = false; if (detailsOpen) { detailsOpen = false; return; } const r = condDetEl.getBoundingClientRect(); detailsPos = { left: Math.min(innerWidth - 360, Math.max(16, r.left - 40)), top: r.top - 10 }; detailsOpen = true; }
@@ -143,6 +147,42 @@
     if (r.date) { const idx = get(app).data?.daily.time.indexOf(r.date) ?? -1; if (idx >= 0) selectDay(idx); }
   }
 
+  // ---- compare mode ----
+  let searchMode: "select" | "compare" = "select";
+  let compare: { name: string; score: ReturnType<typeof scoreOf>; w: any } | null = null;
+  let compareOpen = false;
+  function openCompare() { quickOpen = false; searchMode = "compare"; searchOpen = true; }
+  async function onCompare(e: CustomEvent) {
+    searchOpen = false; searchMode = "select";
+    try {
+      const d = await fetchWeather(e.detail.lat, e.detail.lon);
+      const w = liveW(d);
+      compare = { name: e.detail.name, score: scoreOf(w), w };
+      compareOpen = true;
+    } catch {}
+  }
+  function closeCompare() { compareOpen = false; compare = null; }
+
+  // ---- next strong day (forecast scan) ----
+  $: nextGood = ((_l: string) => {
+    const d = $app.data; if (!d) return null;
+    for (let i = $app.todayIdx + 1; i < d.daily.time.length; i++) {
+      const s = scoreOf(dayW(d, i)).s10;
+      if (s >= 7.5) { const ds = d.daily.time[i]; return { date: ds, label: fmtFullDay(ds), idx: i, s }; }
+    }
+    return null;
+  })($lang);
+  async function notifyMe() {
+    if (!("Notification" in window) || !nextGood) return;
+    let perm = Notification.permission;
+    if (perm === "default") perm = await Notification.requestPermission();
+    if (perm === "granted") {
+      const dl = new Date(nextGood.date + "T00:00").toLocaleDateString($lang, { weekday: "short", month: "short", day: "numeric" });
+      new Notification("GripCast — " + $app.name, { body: `${NEXTGOOD_LABEL[$lang] || NEXTGOOD_LABEL.en}: ${dl} · ${nextGood.s.toFixed(1)}/10`, icon: "./icon.svg" });
+      copied = true; setTimeout(() => (copied = false), 1600);
+    }
+  }
+
   let copied = false;
   function shareLink() {
     quickOpen = false;
@@ -194,7 +234,7 @@
   <div class="center">
     <div class="place" bind:this={placeEl} on:click={toggleQuick} role="button" tabindex="0"><span class="nm">{placeName}</span><span class="chev">▾</span></div>
     {#key scoreText + (moodClass)}
-      <div class="score {moodClass} fade">{scoreText}<span class="den">/10</span></div>
+      <div class="score {moodClass} fade" role="status" aria-live="polite" aria-label="{scoreText} / 10 — {tagline}">{scoreText}<span class="den">/10</span></div>
     {/key}
     <div class="tagline">{tagline}</div>
     {#if $view}
@@ -221,7 +261,8 @@
     <div class="head">{tr("jumpTo")}</div>
     <div class="row" on:click={openSearch} role="button" tabindex="0"><span class="ic">🔍</span><span class="nm">{tr("searchPlaces")}</span></div>
     <div class="row" on:click={geoFromQuick} role="button" tabindex="0"><span class="ic">◎</span><span class="nm">{tr("nearMe")}</span></div>
-    {#if $app.lat != null}<div class="row" on:click={shareLink} role="button" tabindex="0"><span class="ic">🔗</span><span class="nm">{SHARE_LABEL[$lang] || SHARE_LABEL.en}</span></div>{/if}
+    {#if $app.lat != null}<div class="row" on:click={shareLink} use:activate={shareLink} role="button" tabindex="0"><span class="ic">🔗</span><span class="nm">{SHARE_LABEL[$lang] || SHARE_LABEL.en}</span></div>{/if}
+    {#if $app.data}<div class="row" on:click={openCompare} use:activate={openCompare} role="button" tabindex="0"><span class="ic">⇄</span><span class="nm">{COMPARE_LABEL[$lang] || COMPARE_LABEL.en}</span></div>{/if}
     {#if $recentsStore.length}<div class="head">{tr("recent")}</div>{#each $recentsStore as r}<div class="row" on:click={() => pick(r)} role="button" tabindex="0"><span class="ic">◷</span><span class="nm">{r.name}</span></div>{/each}{/if}
     <div class="head">{tr("featured")}</div>{#each FEATURED.slice(0, 5) as f}<div class="row" on:click={() => pick(f)} role="button" tabindex="0"><span class="ic">🏁</span><span class="nm">{f.name}</span><span class="sub">{f.sub}</span></div>{/each}
   </div>
@@ -231,6 +272,7 @@
   <div class="popup up anim-pop" bind:this={detailsEl} style="left:{detailsPos.left}px;top:{detailsPos.top}px">
     <div class="head">{tr("conditions")} · {$view.live ? tr("nowLbl") : dateLabel + " " + pad($app.selHour) + ":00"}</div>
     <div class="wx">
+      <div class="explain">{tg("why", $view.score.whyKey)}</div>
       <div class="grid">{#each detailRows as [k, v]}<span class="k">{k}</span><span class="v">{v}</span>{/each}</div>
       <div class="bars">
         <div class="bar"><div class="lab"><span>{tr("trackGrip")}</span><b>{Math.round($view.score.grip * 100)}%</b></div><div class="track"><i style="width:{Math.round($view.score.grip * 100)}%;background:#3fb98c"></i></div></div>
@@ -248,6 +290,11 @@
           <div class="jet">{tr("jetting")}: <b>{tr(jet.dir)}</b> ({jet.d > 0 ? "+" : ""}{jet.d.toFixed(1)}%) · DA {Math.round(air.da)} m</div>
           <div class="jet">{tr("trackTemp")} ≈ <b>{$fmt.temp(tTrack)}</b> · {tr("tyrePressure")} <b>{tyreArrow(tTrack ?? 20)}</b></div>
           {#if bWindow}<div class="jet">{tr("bestWindow")}: <b>{pad(bWindow.start)}:00–{pad(bWindow.end)}:00</b></div>{/if}
+        </div>
+      {/if}
+      {#if nextGood}
+        <div class="jet" style="margin-top:11px">{NEXTGOOD_LABEL[$lang] || NEXTGOOD_LABEL.en}: <b>{nextGood.label}</b> · {nextGood.s.toFixed(1)}
+          {#if canNotify}<span class="nowbtn" on:click={notifyMe} use:activate={notifyMe} role="button" tabindex="0" style="margin-left:8px">🔔 {NOTIFY_LABEL[$lang] || NOTIFY_LABEL.en}</span>{/if}
         </div>
       {/if}
     </div>
@@ -280,6 +327,27 @@
   </div>
 {/if}
 
+{#if compareOpen && compare && $view}
+  <div class="popup anim-pop cmp" id="compare">
+    <div class="head">{COMPARE_LABEL[$lang] || COMPARE_LABEL.en}<span class="cmpclose" on:click={closeCompare} use:activate={closeCompare} role="button" tabindex="0">✕</span></div>
+    <div class="cmpcols">
+      <div class="cmpcol">
+        <div class="cn">{$app.name}</div>
+        <div class="cs m-{$view.score.mood}">{$view.score.s10.toFixed(1)}</div>
+        <div class="ct">{tg("tags", $view.score.tagKey)}</div>
+        <div class="cmeta">{$fmt.temp($view.w.feels)} · {$view.score.label} · {$fmt.speed($view.w.wind)}</div>
+      </div>
+      <div class="cmpvs">vs</div>
+      <div class="cmpcol">
+        <div class="cn">{compare.name}</div>
+        <div class="cs m-{compare.score.mood}">{compare.score.s10.toFixed(1)}</div>
+        <div class="ct">{tg("tags", compare.score.tagKey)}</div>
+        <div class="cmeta">{$fmt.temp(compare.w.feels)} · {compare.score.label} · {$fmt.speed(compare.w.wind)}</div>
+      </div>
+    </div>
+  </div>
+{/if}
+
 {#if copied}<div class="toast">{COPIED_LABEL[$lang] || COPIED_LABEL.en}</div>{/if}
 
-<SearchModal bind:this={searchComp} open={searchOpen} on:select={onSelect} on:close={() => (searchOpen = false)} />
+<SearchModal bind:this={searchComp} open={searchOpen} pickMode={searchMode} on:select={onSelect} on:compare={onCompare} on:close={() => { searchOpen = false; searchMode = "select"; }} />

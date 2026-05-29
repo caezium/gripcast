@@ -7,6 +7,7 @@
   import MapView from "./MapView.svelte";
 
   export let open = false;
+  export let pickMode: "select" | "compare" = "select";
   const dispatch = createEventDispatcher();
   $: tr = $trStore;
 
@@ -61,7 +62,7 @@
       trackLoading = false;
     });
   }
-  function choose(p: Place) { dispatch("select", { lat: p.lat, lon: p.lon, name: p.name }); }
+  function choose(p: Place) { dispatch(pickMode === "compare" ? "compare" : "select", { lat: p.lat, lon: p.lon, name: p.name }); }
   function clear() { q = ""; screen = "browse"; selIdx = -1; inputEl?.focus(); }
   export function triggerGeo() { doGeo(); }
 

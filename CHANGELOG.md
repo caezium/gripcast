@@ -19,6 +19,12 @@
   **PWA** (manifest + icon) with an offline **service worker** (app shell & tiles
   cache-first, APIs network-first with cache fallback so the last conditions show
   trackside with no signal).
+- **P5 (compare, alerts, a11y, explainer):** side-by-side **compare** of two
+  tracks (score + conditions); **next strong day** finder from the 14-day
+  forecast with an optional local **notification**; **accessibility** —
+  `prefers-reduced-motion` (static clouds + damped transitions), `aria-live`
+  score, keyboard-activatable controls, mood conveyed by text not colour alone;
+  **plain-language explainer** (the "why" subtag under the score + in details).
 
 
 The build progressed through these phases. Earlier iterations lived in a single

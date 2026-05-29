@@ -12,24 +12,27 @@ Inspired by the aesthetic of Kathy Zhou's sunset predictor, rebuilt for motorspo
 
 - **Track-day score (0–10)** — blends track grip (rain/temp dominant), lap-time
   pace (cold dense air = fast) and comfort into one number, with a tagline
-  (`send it`, `grip city`, `wet line`, …).
-- **Dynamic sky backdrop** — the gradient follows the *track's local time*
-  (night / dawn / day / golden hour / dusk), tinted by cloud cover and rain.
-  Text contrast flips automatically; clouds drift faster in higher wind; rain
-  streaks slant with wind; stars come out at night.
-- **Weather details drop-up** — real temperature *and* feels-like, humidity,
-  cloud cover, wind, gusts, precip, pressure, plus a grip / pace / comfort
-  breakdown and a dry-vs-wet-line comparison.
-- **Track search** — type-ahead via OpenStreetMap; results grouped
-  **tracks-first then places** (both collapsible), with kart circuits ranked
-  above other motorsport. Accepts `lat, lon` coordinates directly.
-- **Map view** — pan a dark map and kart circuits load automatically as
-  markers; click one to score it.
-- **History & forecast timeline** — scrub ~3 weeks of past + predicted days and
-  watch the score change.
-- **Quick switch** — click the track name for recents, featured circuits and
-  "near me".
-- **Countdown** — live countdown to the track's next sunrise / sunset.
+  (`send it`, `grip city`, `wet line`, …) and a plain-language "why".
+- **Density-altitude + jetting guide** — relative air density %, richer/leaner
+  direction vs ISA baseline, and density altitude — turns the weather into
+  2-stroke engine tuning. Plus track-temp estimate, tyre-pressure nudge and the
+  **best session window** today.
+- **Dynamic sky backdrop** — gradient follows the *track's local time*
+  (night/dawn/day/golden/dusk), tinted by cloud, rain and temperature. Contrast
+  flips automatically; clouds drift faster in wind; rain streaks; stars at night.
+- **Information design** — context subtag surfaces the limiting factor, a rain
+  timeline ("dry until 14:00"), wind-direction arrow, categorical precip, and a
+  forecast-confidence fade on the trends graph.
+- **Weather details drop-up** — real temp + feels-like, humidity, cloud, wind,
+  gusts, precip, pressure, a grip/pace/comfort breakdown and dry-vs-wet line.
+- **Search** — type-ahead (Photon/OSM), grouped tracks-first then places (both
+  collapsible), kart circuits ranked first; accepts `lat, lon`; plus a **map view**.
+- **History & forecast** — 60-day timeline + an SVG trends chart; an **hour
+  scrubber** to check any hour of any day; **next strong day** finder + notify.
+- **Compare** two tracks side by side · **shareable deep links** · **8 languages**
+  (auto + saved) · **°C/°F & km/h/mph** · installable **PWA, works offline**.
+- **Quick switch** — click the track name for recents, featured, near-me, share.
+- **Countdown** — time to the day's next **peak-grip** window.
 
 ## Data sources
 
