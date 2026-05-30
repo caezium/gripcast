@@ -1,13 +1,16 @@
 # Changelog
 
-## v0.10 — Lap-time mode (mock)
+## v0.10 — Lap-time mode (mock, IAME X30 Senior)
 - Tap the score to flip the hero between `X/10` and a **best theoretical lap**
   for the conditions — a far more driver-intuitive read than an abstract scale.
-- Model (rough/mock): `lap = baseline × (1 + penalty)`, where each point below
-  10 ≈ +0.7% and a wet line adds more; shows the gap vs ideal (`+1.1s`).
-- Per-track **baseline** seeded for featured circuits and **editable** in the
-  details drop-up (persisted per track), since real per-track lap data isn't in
-  the weather feed. Mode + baseline persist; fully localised.
+- Baselines are **competitive dry IAME X30 Senior** (125cc TaG) times, grounded
+  where data exists (e.g. South Garda ~48.5s, reading ~48.8 on a cool dry night).
+  Class is labelled in the UI so the assumption is explicit.
+- Model: `lap = baseline × (1 + penalty)`, each point below 10 ≈ +0.7%, wet adds
+  more; shows the gap vs ideal (`+0.3s`).
+- For tracks with **no credible benchmark, it no longer fabricates a number** —
+  it shows `—` and prompts for the X30 Senior baseline (editable, persisted per
+  track). Mode + baseline persist; fully localised.
 
 ## v0.9 — Real jetting + tyre models (inline)
 - Folded the standalone **JetLab** engine model and the **tyre-pressure**

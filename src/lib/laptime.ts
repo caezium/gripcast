@@ -5,14 +5,27 @@
 
 import type { Mood } from "./score";
 
-/** approximate kart benchmark laps (s) for the featured circuits — mock seeds */
+/** the kart class these baselines assume */
+export const KART_CLASS = "IAME X30 Senior";
+
+// Competitive dry X30 Senior (125cc TaG, ~30 hp) lap baselines (s) for the
+// featured circuits — the fast/qualifying end, which the model treats as the
+// score-10 ideal. Grounded where data exists (e.g. South Garda ~48–49s).
 const BENCH: Record<string, number> = {
-  "South Garda Karting": 47.5, "Franciacorta Karting": 50.0, "Adria Karting Raceway": 44.0,
-  "PF International": 49.0, "Whilton Mill": 47.0, "Karting Genk": 48.0,
-  "GoPro Motorplex": 44.0, "New Castle Motorsports": 43.0, "Suzuka Circuit": 62.0, "Bahrain Karting": 50.0,
+  "South Garda Karting": 48.5,
+  "Franciacorta Karting": 51.0,
+  "Adria Karting Raceway": 48.5,
+  "PF International": 53.0,
+  "Whilton Mill": 52.0,
+  "Karting Genk": 50.5,
+  "GoPro Motorplex": 49.0,
+  "New Castle Motorsports": 47.5,
+  "Suzuka Circuit": 50.0,
+  "Bahrain Karting": 53.0,
 };
-export function defaultBaseline(name: string): number {
-  return BENCH[name] ?? 50.0;
+/** known X30 Senior baseline, or null when we have no credible figure */
+export function defaultBaseline(name: string): number | null {
+  return BENCH[name] ?? null;
 }
 
 export interface Lap { sec: number; gapSec: number; gapPct: number; }
