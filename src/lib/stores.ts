@@ -1,5 +1,6 @@
 import { writable, derived, get } from "svelte/store";
 import { fetchWeather, fetchHourly, liveW, hourW, peakHour, type Weather, type Hourly } from "./weather";
+import { trackLength } from "./geo";
 import { scoreOf, type W } from "./score";
 import { computeSky, phaseAt, type SkyOut, type Phase } from "./sky";
 import { trackNow, minFromISO, lsSet } from "./util";
@@ -8,11 +9,11 @@ export interface AppState {
   lat: number | null; lon: number | null; name: string;
   data: Weather | null; tzOffset: number; tzAbbr: string; todayISO: string | null; todayIdx: number;
   hourly: Record<string, Hourly>; selDate: string | null; selHour: number; live: boolean;
-  loading: boolean; error: boolean;
+  loading: boolean; error: boolean; trackLengthM: number | null;
 }
 const init: AppState = {
   lat: null, lon: null, name: "", data: null, tzOffset: 0, tzAbbr: "", todayISO: null, todayIdx: 0,
-  hourly: {}, selDate: null, selHour: 12, live: true, loading: false, error: false,
+  hourly: {}, selDate: null, selHour: 12, live: true, loading: false, error: false, trackLengthM: null,
 };
 export const app = writable<AppState>(init);
 
@@ -56,9 +57,13 @@ export const FEATURED: RecentPlace[] & { sub?: string }[] = [
 
 /* ---------- actions ---------- */
 export async function loadPlace(lat: number, lon: number, name: string) {
-  app.update((s) => ({ ...s, lat, lon, name, data: null, hourly: {}, error: false, loading: true }));
+  app.update((s) => ({ ...s, lat, lon, name, data: null, hourly: {}, error: false, loading: true, trackLengthM: null }));
   pushRecent({ name, lat, lon }); recentsStore.set(recents());
   lsSet("gc_last", { name, lat, lon }, 1e12);
+  // circuit length (for length-derived lap baselines) — non-blocking
+  trackLength(lat, lon).then((m) => {
+    if (m) app.update((s) => (s.lat === lat && s.lon === lon ? { ...s, trackLengthM: m } : s));
+  });
   try {
     const d = await fetchWeather(lat, lon);
     const tzOffset = d.utc_offset_seconds || 0;

@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.11 — Physics lap model + real X30 Senior baselines
+- Replaced the linear lap penalty with a **physics-grounded** model: corner
+  speed ∝ √grip, weighted by a cornering fraction (karts are ~62% cornering),
+  with a **discrete wet step** (rain tyres ≈ 20% less grip, not a smooth slide)
+  — driven by the **grip/pace sub-scores**, not the blended /10. Honest shape;
+  exact coefficients still want logged-lap calibration.
+- **Real IAME X30 Senior baselines** for the featured circuits (e.g. South Garda
+  ~48.5s, grounded against onboard/qualifying data) — class is labelled in the UI.
+- **OSM track-length → baseline** for unmapped tracks: sums nearby `raceway`
+  geometry (clamped to a plausible kart range) and labels it `≈ N m` as a rough
+  map estimate; editable per track. Stops fabricating a number for unknowns.
+
 ## v0.10 — Lap-time mode (mock, IAME X30 Senior)
 - Tap the score to flip the hero between `X/10` and a **best theoretical lap**
   for the conditions — a far more driver-intuitive read than an abstract scale.

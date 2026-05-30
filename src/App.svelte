@@ -3,7 +3,7 @@
   import { get } from "svelte/store";
   import { app, view, loadPlace, setLive, selectDay, setHour, recentsStore, FEATURED } from "./lib/stores";
   import { t as trStore, tg as tgStore, lang, setLang, LANGS, HINT_RECENTS, SHARE_LABEL, COPIED_LABEL, COMPARE_LABEL, NEXTGOOD_LABEL, NOTIFY_LABEL, TOOLS_LABEL, LAP_LABEL } from "./lib/i18n";
-  import { theoreticalLap, fmtLap, defaultBaseline, KART_CLASS } from "./lib/laptime";
+  import { theoreticalLap, fmtLap, defaultBaseline, lengthBaseline, KART_CLASS } from "./lib/laptime";
   import { fmt, toggleUnits } from "./lib/units";
   import { airDensity, trackTemp, bestWindow } from "./lib/karting";
   import { ENGINES, ENGINE_MAP, jet, turnsStr, vsBaseline } from "./lib/jetting";
@@ -105,9 +105,21 @@
   let lapMode = localStorage.getItem("gc_lapmode") === "1";
   let baseBump = 0;
   function baseKey() { return `gc_base:${$app.lat?.toFixed(3)},${$app.lon?.toFixed(3)}`; }
-  $: baseline = (baseBump, $app.lat != null ? (localStorage.getItem(baseKey()) ? +localStorage.getItem(baseKey())! : defaultBaseline($app.name)) : null);
+  function computeBase(a: typeof $app, _b: number): { sec: number | null; src: string } {
+    if (a.lat == null) return { sec: null, src: "" };
+    const k = `gc_base:${a.lat.toFixed(3)},${a.lon?.toFixed(3)}`;
+    const ov = localStorage.getItem(k);
+    if (ov) return { sec: +ov, src: "set" };
+    const known = defaultBaseline(a.name);
+    if (known) return { sec: known, src: "typical" };
+    if (a.trackLengthM) return { sec: lengthBaseline(a.trackLengthM), src: "length" };
+    return { sec: null, src: "" };
+  }
+  $: baseInfo = computeBase($app, baseBump);
+  $: baseline = baseInfo.sec;
   function setBaseline(e: Event) { const v = +(e.target as HTMLInputElement).value; if (v > 0 && $app.lat != null) { localStorage.setItem(baseKey(), String(v)); baseBump++; } }
-  $: lap = $view && baseline ? theoreticalLap($view.score.s10, $view.score.mood, baseline) : null;
+  $: lap = $view && baseline ? theoreticalLap({ grip: $view.score.grip, pace: $view.score.pace, mood: $view.score.mood }, baseline) : null;
+  $: baseSrcTag = baseInfo.src === "length" && $app.trackLengthM ? `≈ ${$app.trackLengthM} m` : baseInfo.src === "set" ? "set" : "";
   $: lapL = LAP_LABEL[$lang] || LAP_LABEL.en;
   function scoreClick() { if (!$view) { openSearch(); return; } lapMode = !lapMode; localStorage.setItem("gc_lapmode", lapMode ? "1" : "0"); }
 
@@ -325,7 +337,7 @@
             </div>
           {/if}
           <div class="jet">{tr("trackTemp")} ≈ <b>{$fmt.temp(tTrack)}</b>{#if bWindow} · {tr("bestWindow")} <b>{pad(bWindow.start)}:00–{pad(bWindow.end)}:00</b>{/if}</div>
-          <div class="jet">{lapL.baseline} <span class="dasub">({KART_CLASS})</span> <input class="baseinp" type="number" step="0.1" value={baseline ?? ""} placeholder="—" on:change={setBaseline} /> s{#if lap} → {lapL.bestLap} <b>{fmtLap(lap.sec)}</b> <span class="dasub">({lap.gapSec >= 0 ? "+" : ""}{lap.gapSec.toFixed(1)}s)</span>{/if}</div>
+          <div class="jet">{lapL.baseline} <span class="dasub">({KART_CLASS}{baseSrcTag ? " · " + baseSrcTag : ""})</span> <input class="baseinp" type="number" step="0.1" value={baseline ? baseline.toFixed(1) : ""} placeholder="—" on:change={setBaseline} /> s{#if lap} → {lapL.bestLap} <b>{fmtLap(lap.sec)}</b> <span class="dasub">({lap.gapSec >= 0 ? "+" : ""}{lap.gapSec.toFixed(1)}s)</span>{/if}</div>
         </div>
       {/if}
       {#if nextGood}

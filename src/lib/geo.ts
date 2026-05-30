@@ -61,6 +61,29 @@ export async function overpassBBox(b: { s: number; w: number; n: number; e: numb
   }).filter((x: Place) => x.lat != null);
 }
 
+/**
+ * Rough circuit length (m) from OSM raceway geometry near a point, or null.
+ * Circuits are often drawn as several connected ways, so we sum them; the
+ * result is clamped to a plausible kart-lap range and treated as a ballpark
+ * (alternate layouts can inflate it — the UI labels it as a map estimate and
+ * lets the user override).
+ */
+export async function trackLength(lat: number, lon: number): Promise<number | null> {
+  const ql = `[out:json][timeout:25];way["highway"="raceway"](around:250,${lat},${lon});out geom;`;
+  try {
+    const j = await overpassFetch(ql);
+    let total = 0;
+    for (const el of j.elements || []) {
+      const g = el.geometry;
+      if (!g || g.length < 2) continue;
+      for (let i = 1; i < g.length; i++) total += haversine(g[i - 1].lat, g[i - 1].lon, g[i].lat, g[i].lon) * 1000;
+    }
+    return total >= 500 && total <= 1700 ? Math.round(total) : null;
+  } catch {
+    return null;
+  }
+}
+
 export const dist = haversine;
 export function dedupe(arr: Place[]): Place[] {
   const seen = new Set<string>();
