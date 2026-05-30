@@ -2,7 +2,8 @@
   import { onMount } from "svelte";
   import { get } from "svelte/store";
   import { app, view, loadPlace, setLive, selectDay, setHour, recentsStore, FEATURED } from "./lib/stores";
-  import { t as trStore, tg as tgStore, lang, setLang, LANGS, HINT_RECENTS, SHARE_LABEL, COPIED_LABEL, COMPARE_LABEL, NEXTGOOD_LABEL, NOTIFY_LABEL, TOOLS_LABEL } from "./lib/i18n";
+  import { t as trStore, tg as tgStore, lang, setLang, LANGS, HINT_RECENTS, SHARE_LABEL, COPIED_LABEL, COMPARE_LABEL, NEXTGOOD_LABEL, NOTIFY_LABEL, TOOLS_LABEL, LAP_LABEL } from "./lib/i18n";
+  import { theoreticalLap, fmtLap, defaultBaseline } from "./lib/laptime";
   import { fmt, toggleUnits } from "./lib/units";
   import { airDensity, trackTemp, bestWindow } from "./lib/karting";
   import { ENGINES, ENGINE_MAP, jet, turnsStr, vsBaseline } from "./lib/jetting";
@@ -100,6 +101,15 @@
   $: tyreSel = COMPOUND_MAP[tyreCompound] || COMPOUNDS[0];
   $: tyreOut = $view ? coldPressure(tyreSel.brand, tyreSel.model, $view.w.temp) : null;
   $: toolL = TOOLS_LABEL[$lang] || TOOLS_LABEL.en;
+  // mock lap-time mode
+  let lapMode = localStorage.getItem("gc_lapmode") === "1";
+  let baseBump = 0;
+  function baseKey() { return `gc_base:${$app.lat?.toFixed(3)},${$app.lon?.toFixed(3)}`; }
+  $: baseline = (baseBump, $app.lat != null ? (localStorage.getItem(baseKey()) ? +localStorage.getItem(baseKey())! : defaultBaseline($app.name)) : 50);
+  function setBaseline(e: Event) { const v = +(e.target as HTMLInputElement).value; if (v > 0 && $app.lat != null) { localStorage.setItem(baseKey(), String(v)); baseBump++; } }
+  $: lap = $view ? theoreticalLap($view.score.s10, $view.score.mood, baseline) : null;
+  $: lapL = LAP_LABEL[$lang] || LAP_LABEL.en;
+  function scoreClick() { if (!$view) { openSearch(); return; } lapMode = !lapMode; localStorage.setItem("gc_lapmode", lapMode ? "1" : "0"); }
 
   function onHour(e: Event) { setHour(+(e.target as HTMLInputElement).value); }
   function dayScore(i: number) { return $app.data ? scoreOf(dayW($app.data, i)).s10 : 0; }
@@ -245,12 +255,15 @@
 
   <div class="center">
     <div class="place" bind:this={placeEl} on:click={toggleQuick} role="button" tabindex="0"><span class="nm">{placeName}</span><span class="chev">▾</span></div>
-    {#key scoreText + (moodClass)}
-      <div class="score {moodClass} fade" role="status" aria-live="polite" aria-label="{scoreText} / 10 — {tagline}">{scoreText}<span class="den">/10</span></div>
+    {#key (lapMode ? "lap" : scoreText) + moodClass}
+      <div class="score {moodClass} fade" class:lapmode={lapMode && lap} role="button" tabindex="0" aria-label={lapMode && lap ? lapL.bestLap + " " + fmtLap(lap.sec) : scoreText + " / 10 — " + tagline} on:click={scoreClick} use:activate={scoreClick}>
+        {#if lapMode && lap}{fmtLap(lap.sec)}{:else}{scoreText}<span class="den">/10</span>{/if}
+      </div>
     {/key}
     <div class="tagline">{tagline}</div>
     {#if $view}
-      <div class="subtag">{tg("why", $view.score.whyKey)}</div>
+      <div class="subtag">{#if lapMode && lap}≈ {lapL.bestLap} (est.) · {lap.gapSec >= 0 ? "+" : ""}{lap.gapSec.toFixed(1)}s {lapL.vsIdeal}{:else}{tg("why", $view.score.whyKey)}{/if}</div>
+      <div class="modetog" on:click={scoreClick} use:activate={scoreClick} role="button" tabindex="0">{lapMode ? lapL.showScore : lapL.showLap}</div>
       <div class="stats">
         <span><span class="lab">{$view.live ? tr("nowLbl") : pad($app.selHour) + ":00"}</span> <b>{$fmt.temp($view.w.feels)}</b></span>
         <span class="det" bind:this={condDetEl} on:click={toggleDetails} role="button" tabindex="0"><b>{$view.score.label}</b></span>
@@ -312,6 +325,7 @@
             </div>
           {/if}
           <div class="jet">{tr("trackTemp")} ≈ <b>{$fmt.temp(tTrack)}</b>{#if bWindow} · {tr("bestWindow")} <b>{pad(bWindow.start)}:00–{pad(bWindow.end)}:00</b>{/if}</div>
+          {#if lap}<div class="jet">{lapL.baseline} <input class="baseinp" type="number" step="0.1" value={baseline} on:change={setBaseline} /> s → {lapL.bestLap} <b>{fmtLap(lap.sec)}</b> <span class="dasub">({lap.gapSec >= 0 ? "+" : ""}{lap.gapSec.toFixed(1)}s)</span></div>{/if}
         </div>
       {/if}
       {#if nextGood}

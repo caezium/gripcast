@@ -68,6 +68,17 @@ export const COPIED_LABEL: Record<string, string> = {
   it: "link copiato ✓", pt: "link copiado ✓", ja: "コピーしました ✓", zh: "已复制 ✓",
 };
 
+export const LAP_LABEL: Record<string, { bestLap: string; baseline: string; vsIdeal: string; showLap: string; showScore: string }> = {
+  en: { bestLap: "best lap", baseline: "baseline lap", vsIdeal: "vs ideal", showLap: "→ lap time", showScore: "→ score" },
+  es: { bestLap: "mejor vuelta", baseline: "vuelta base", vsIdeal: "vs ideal", showLap: "→ tiempo", showScore: "→ puntuación" },
+  fr: { bestLap: "meilleur tour", baseline: "tour de réf.", vsIdeal: "vs idéal", showLap: "→ temps au tour", showScore: "→ score" },
+  de: { bestLap: "Bestzeit", baseline: "Referenzrunde", vsIdeal: "vs ideal", showLap: "→ Rundenzeit", showScore: "→ Score" },
+  it: { bestLap: "miglior giro", baseline: "giro base", vsIdeal: "vs ideale", showLap: "→ tempo sul giro", showScore: "→ punteggio" },
+  pt: { bestLap: "melhor volta", baseline: "volta base", vsIdeal: "vs ideal", showLap: "→ tempo de volta", showScore: "→ pontuação" },
+  ja: { bestLap: "ベストラップ", baseline: "基準ラップ", vsIdeal: "理想比", showLap: "→ ラップタイム", showScore: "→ スコア" },
+  zh: { bestLap: "最佳单圈", baseline: "基准圈速", vsIdeal: "对比理想", showLap: "→ 单圈时间", showScore: "→ 评分" },
+};
+
 export const TOOLS_LABEL: Record<string, { engine: string; tyre: string; cold: string }> = {
   en: { engine: "engine", tyre: "tyre", cold: "cold" },
   es: { engine: "motor", tyre: "neumático", cold: "frío" },

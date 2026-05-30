@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.10 — Lap-time mode (mock)
+- Tap the score to flip the hero between `X/10` and a **best theoretical lap**
+  for the conditions — a far more driver-intuitive read than an abstract scale.
+- Model (rough/mock): `lap = baseline × (1 + penalty)`, where each point below
+  10 ≈ +0.7% and a wet line adds more; shows the gap vs ideal (`+1.1s`).
+- Per-track **baseline** seeded for featured circuits and **editable** in the
+  details drop-up (persisted per track), since real per-track lap data isn't in
+  the weather feed. Mode + baseline persist; fully localised.
+
 ## v0.9 — Real jetting + tyre models (inline)
 - Folded the standalone **JetLab** engine model and the **tyre-pressure**
   notebook model into GripCast's conditions drop-up, fed by the shared
