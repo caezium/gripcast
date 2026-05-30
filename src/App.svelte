@@ -2,9 +2,11 @@
   import { onMount } from "svelte";
   import { get } from "svelte/store";
   import { app, view, loadPlace, setLive, selectDay, setHour, recentsStore, FEATURED } from "./lib/stores";
-  import { t as trStore, tg as tgStore, lang, setLang, LANGS, HINT_RECENTS, SHARE_LABEL, COPIED_LABEL, COMPARE_LABEL, NEXTGOOD_LABEL, NOTIFY_LABEL } from "./lib/i18n";
+  import { t as trStore, tg as tgStore, lang, setLang, LANGS, HINT_RECENTS, SHARE_LABEL, COPIED_LABEL, COMPARE_LABEL, NEXTGOOD_LABEL, NOTIFY_LABEL, TOOLS_LABEL } from "./lib/i18n";
   import { fmt, toggleUnits } from "./lib/units";
-  import { airDensity, jetting, trackTemp, tyreArrow, bestWindow } from "./lib/karting";
+  import { airDensity, trackTemp, bestWindow } from "./lib/karting";
+  import { ENGINES, ENGINE_MAP, jet, turnsStr, vsBaseline } from "./lib/jetting";
+  import { COMPOUNDS, COMPOUND_MAP, coldPressure } from "./lib/tyres";
   import { fetchWeather, liveW } from "./lib/weather";
   import { activate } from "./lib/a11y";
   import { trackNow, pad, lsGet } from "./lib/util";
@@ -85,9 +87,19 @@
   // karting tools
   $: daylight = $view ? ["day", "golden", "dawn"].includes($view.phase) : false;
   $: air = $view && $view.w.pressure != null ? airDensity($view.w.temp, $view.w.pressure, $view.w.humidity) : null;
-  $: jet = air ? jetting(air.relPct) : null;
   $: tTrack = $view ? trackTemp($view.w.temp, $view.w.cloud, daylight) : null;
   $: bWindow = curHourly ? bestWindow(curHourly, fromHour) : null;
+  // inline jetting (per-engine needle) + tyre (per-compound cold pressure)
+  let jetEngine = localStorage.getItem("gc_engine") || "x30jr";
+  let tyreCompound = localStorage.getItem("gc_tyre") || "Mojo|D2";
+  function setEngine(e: Event) { jetEngine = (e.target as HTMLSelectElement).value; localStorage.setItem("gc_engine", jetEngine); }
+  function setTyre(e: Event) { tyreCompound = (e.target as HTMLSelectElement).value; localStorage.setItem("gc_tyre", tyreCompound); }
+  $: jetEng = ENGINE_MAP[jetEngine] || ENGINES[0];
+  $: jetOut = air ? jet(jetEng, air.relPct) : null;
+  $: jetBase = jet(jetEng, 100);
+  $: tyreSel = COMPOUND_MAP[tyreCompound] || COMPOUNDS[0];
+  $: tyreOut = $view ? coldPressure(tyreSel.brand, tyreSel.model, $view.w.temp) : null;
+  $: toolL = TOOLS_LABEL[$lang] || TOOLS_LABEL.en;
 
   function onHour(e: Event) { setHour(+(e.target as HTMLInputElement).value); }
   function dayScore(i: number) { return $app.data ? scoreOf(dayW($app.data, i)).s10 : 0; }
@@ -284,12 +296,22 @@
         <div class="c" class:active={$view.w.precip < 0.1}><div class="n">{dryScore}</div><div class="t">{tr("dryLine")}</div></div>
         <div class="c" class:active={$view.w.precip >= 0.1}><div class="n">{wetScore}</div><div class="t">{tr("wetLine")}</div></div>
       </div>
-      {#if air && jet}
+      {#if air}
         <div class="da">
-          <div class="row1"><span>{tr("airDensity")}</span><span class="big">{air.relPct.toFixed(0)}%</span></div>
-          <div class="jet">{tr("jetting")}: <b>{tr(jet.dir)}</b> ({jet.d > 0 ? "+" : ""}{jet.d.toFixed(1)}%) · DA {Math.round(air.da)} m</div>
-          <div class="jet">{tr("trackTemp")} ≈ <b>{$fmt.temp(tTrack)}</b> · {tr("tyrePressure")} <b>{tyreArrow(tTrack ?? 20)}</b></div>
-          {#if bWindow}<div class="jet">{tr("bestWindow")}: <b>{pad(bWindow.start)}:00–{pad(bWindow.end)}:00</b></div>{/if}
+          <div class="row1"><span>{tr("airDensity")}</span><span class="big">{air.relPct.toFixed(0)}%</span> <span class="dasub">· DA {Math.round(air.da)} m</span></div>
+          {#if jetOut}
+            <div class="jet">{tr("jetting")} · {toolL.engine}
+              <select class="toolsel" bind:value={jetEngine} on:change={setEngine}>{#each ENGINES as e}<option value={e.key}>{e.name}</option>{/each}</select>
+              → <b>H {turnsStr(jetOut.H)} · L {turnsStr(jetOut.L)}</b> <span class="dasub">({vsBaseline(jetOut.H, jetBase.H)})</span>
+            </div>
+          {/if}
+          {#if tyreOut}
+            <div class="jet">{toolL.tyre}
+              <select class="toolsel" bind:value={tyreCompound} on:change={setTyre}>{#each COMPOUNDS as c}<option value={c.key}>{c.label}</option>{/each}</select>
+              → <b>{tyreOut.bar.toFixed(2)} bar · {tyreOut.psi.toFixed(1)} psi</b> {toolL.cold}
+            </div>
+          {/if}
+          <div class="jet">{tr("trackTemp")} ≈ <b>{$fmt.temp(tTrack)}</b>{#if bWindow} · {tr("bestWindow")} <b>{pad(bWindow.start)}:00–{pad(bWindow.end)}:00</b>{/if}</div>
         </div>
       {/if}
       {#if nextGood}

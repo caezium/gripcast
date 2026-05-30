@@ -68,6 +68,17 @@ export const COPIED_LABEL: Record<string, string> = {
   it: "link copiato ✓", pt: "link copiado ✓", ja: "コピーしました ✓", zh: "已复制 ✓",
 };
 
+export const TOOLS_LABEL: Record<string, { engine: string; tyre: string; cold: string }> = {
+  en: { engine: "engine", tyre: "tyre", cold: "cold" },
+  es: { engine: "motor", tyre: "neumático", cold: "frío" },
+  fr: { engine: "moteur", tyre: "pneu", cold: "à froid" },
+  de: { engine: "Motor", tyre: "Reifen", cold: "kalt" },
+  it: { engine: "motore", tyre: "gomma", cold: "a freddo" },
+  pt: { engine: "motor", tyre: "pneu", cold: "a frio" },
+  ja: { engine: "エンジン", tyre: "タイヤ", cold: "冷間" },
+  zh: { engine: "发动机", tyre: "轮胎", cold: "冷胎" },
+};
+
 export const COMPARE_LABEL: Record<string, string> = {
   en: "compare…", es: "comparar…", fr: "comparer…", de: "vergleichen…",
   it: "confronta…", pt: "comparar…", ja: "比較…", zh: "对比…",

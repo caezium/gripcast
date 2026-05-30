@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.9 — Real jetting + tyre models (inline)
+- Folded the standalone **JetLab** engine model and the **tyre-pressure**
+  notebook model into GripCast's conditions drop-up, fed by the shared
+  humid-air → RAD core (`airDensity`) and the track's live temp — no new screens.
+- **Jetting:** pick engine (IAME X30 Jr/Sr, KA100, Mini Swift) → actual High/Low
+  **needle turns** (e.g. `H 1⅛ · L 1½`) with a vs-baseline note (`⅜ leaner`),
+  categorical to eighths (never false precision).
+- **Tyres:** pick compound (Mojo / LeCont / Vega / MG) → recommended **cold
+  pressure** in bar + psi at the current air temp (coefficient model + exact
+  bar↔psi). Gay-Lussac hot↔cold helper available.
+- Selections persist; replaces the earlier rough richer/leaner % and tyre arrow.
+
 ## v0.8 — Vite/Svelte migration + information design
 - **P1:** migrated the single-file prototype to **Vite + TypeScript + Svelte**
   (typed `lib/`, Svelte `components/`, reactive store + derived view model) at
