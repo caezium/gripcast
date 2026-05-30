@@ -4,6 +4,8 @@
   import { app, view, loadPlace, setLive, selectDay, setHour, recentsStore, FEATURED } from "./lib/stores";
   import { t as trStore, tg as tgStore, lang, setLang, LANGS, HINT_RECENTS, SHARE_LABEL, COPIED_LABEL, COMPARE_LABEL, NEXTGOOD_LABEL, NOTIFY_LABEL, TOOLS_LABEL, LAP_LABEL } from "./lib/i18n";
   import { theoreticalLap, fmtLap, defaultBaseline, lengthBaseline, KART_CLASS } from "./lib/laptime";
+  import { PERSONAL, isPersonalTrack, personalLimit } from "./lib/personal";
+  import MyLaps from "./components/MyLaps.svelte";
   import { fmt, toggleUnits } from "./lib/units";
   import { airDensity, trackTemp, bestWindow } from "./lib/karting";
   import { ENGINES, ENGINE_MAP, jet, turnsStr, vsBaseline } from "./lib/jetting";
@@ -105,8 +107,16 @@
   let lapMode = localStorage.getItem("gc_lapmode") === "1";
   let baseBump = 0;
   function baseKey() { return `gc_base:${$app.lat?.toFixed(3)},${$app.lon?.toFixed(3)}`; }
-  function computeBase(a: typeof $app, _b: number): { sec: number | null; src: string } {
+  // personalization (Shenzhen only — calibrated from the user's .xrk telemetry)
+  let personalOn = localStorage.getItem("gc_personal") !== "0";
+  let myLapsOpen = false;
+  $: isPersonal = $app.lat != null && isPersonalTrack($app.lat, $app.lon);
+  $: personalActive = personalOn && isPersonal;
+  function togglePersonal() { personalOn = !personalOn; localStorage.setItem("gc_personal", personalOn ? "1" : "0"); }
+
+  function computeBase(a: typeof $app, _b: number, personal: boolean): { sec: number | null; src: string } {
     if (a.lat == null) return { sec: null, src: "" };
+    if (personal) return { sec: personalLimit(a.selDate || new Date().toISOString().slice(0, 10)), src: "personal" };
     const k = `gc_base:${a.lat.toFixed(3)},${a.lon?.toFixed(3)}`;
     const ov = localStorage.getItem(k);
     if (ov) return { sec: +ov, src: "set" };
@@ -115,11 +125,11 @@
     if (a.trackLengthM) return { sec: lengthBaseline(a.trackLengthM), src: "length" };
     return { sec: null, src: "" };
   }
-  $: baseInfo = computeBase($app, baseBump);
+  $: baseInfo = computeBase($app, baseBump, personalActive);
   $: baseline = baseInfo.sec;
   function setBaseline(e: Event) { const v = +(e.target as HTMLInputElement).value; if (v > 0 && $app.lat != null) { localStorage.setItem(baseKey(), String(v)); baseBump++; } }
   $: lap = $view && baseline ? theoreticalLap({ grip: $view.score.grip, pace: $view.score.pace, mood: $view.score.mood }, baseline) : null;
-  $: baseSrcTag = baseInfo.src === "length" && $app.trackLengthM ? `≈ ${$app.trackLengthM} m` : baseInfo.src === "set" ? "set" : "";
+  $: baseSrcTag = baseInfo.src === "personal" ? "★ from your laps" : baseInfo.src === "length" && $app.trackLengthM ? `≈ ${$app.trackLengthM} m` : baseInfo.src === "set" ? "set" : "";
   $: lapL = LAP_LABEL[$lang] || LAP_LABEL.en;
   function scoreClick() { if (!$view) { openSearch(); return; } lapMode = !lapMode; localStorage.setItem("gc_lapmode", lapMode ? "1" : "0"); }
 
@@ -145,7 +155,7 @@
   }
   function onKey(e: KeyboardEvent) {
     if (e.key === "/" && !searchOpen && (document.activeElement as HTMLElement)?.tagName !== "INPUT") { e.preventDefault(); openSearch(); }
-    if (e.key === "Escape") { searchOpen = false; quickOpen = false; detailsOpen = false; langOpen = false; }
+    if (e.key === "Escape") { searchOpen = false; quickOpen = false; detailsOpen = false; langOpen = false; myLapsOpen = false; }
   }
   function onBlurbClick(e: MouseEvent) { if ((e.target as HTMLElement).id === "blurbDet") toggleDetails(); }
   function toggleTimeline() { timelineOpen = !timelineOpen; }
@@ -274,8 +284,14 @@
     {/key}
     <div class="tagline">{tagline}</div>
     {#if $view}
-      <div class="subtag">{#if lapMode && lap}≈ {lapL.bestLap} · {KART_CLASS} · {lap.gapSec >= 0 ? "+" : ""}{lap.gapSec.toFixed(1)}s {lapL.vsIdeal}{:else if lapMode}{KART_CLASS} · ↓ {lapL.baseline}{:else}{tg("why", $view.score.whyKey)}{/if}</div>
-      <div class="modetog" on:click={scoreClick} use:activate={scoreClick} role="button" tabindex="0">{lapMode ? lapL.showScore : lapL.showLap}</div>
+      <div class="subtag">{#if lapMode && lap}{#if personalActive}★ personal · {lap.gapSec >= 0 ? "+" : ""}{lap.gapSec.toFixed(1)}s vs your limit · PB {fmtLap(PERSONAL.fastest)}{:else}≈ {lapL.bestLap} · {KART_CLASS} · {lap.gapSec >= 0 ? "+" : ""}{lap.gapSec.toFixed(1)}s {lapL.vsIdeal}{/if}{:else if lapMode}{KART_CLASS} · ↓ {lapL.baseline}{:else}{tg("why", $view.score.whyKey)}{/if}</div>
+      <div class="modetog-row">
+        <span class="modetog" on:click={scoreClick} use:activate={scoreClick} role="button" tabindex="0">{lapMode ? lapL.showScore : lapL.showLap}</span>
+        {#if isPersonal}
+          <span class="modetog ptog" class:on={personalOn} on:click={togglePersonal} use:activate={togglePersonal} role="button" tabindex="0">★ personal</span>
+          <span class="modetog" on:click={() => (myLapsOpen = true)} use:activate={() => (myLapsOpen = true)} role="button" tabindex="0">📊 my laps</span>
+        {/if}
+      </div>
       <div class="stats">
         <span><span class="lab">{$view.live ? tr("nowLbl") : pad($app.selHour) + ":00"}</span> <b>{$fmt.temp($view.w.feels)}</b></span>
         <span class="det" bind:this={condDetEl} on:click={toggleDetails} role="button" tabindex="0"><b>{$view.score.label}</b></span>
@@ -361,6 +377,13 @@
     <div class="head">{tr("trends")} · {$app.name}</div>
     <div class="glegend"><span class="lg b">{tr("trackGrip")}</span><span class="lg a">{tr("temp")}</span><span class="lg r">{tr("precip")}</span></div>
     <div class="gwrap"><TrendsGraph data={$app.data} selDate={$app.selDate} on:select={(e) => selectDay(e.detail)} /></div>
+  </div>
+{/if}
+
+{#if myLapsOpen}
+  <div class="popup anim-pop" id="mylaps">
+    <div class="ml-close" on:click={() => (myLapsOpen = false)} use:activate={() => (myLapsOpen = false)} role="button" tabindex="0">✕</div>
+    <MyLaps />
   </div>
 {/if}
 

@@ -51,14 +51,18 @@ export interface Lap { sec: number; gapSec: number; gapPct: number; }
  * The exact coefficients still want calibration from logged laps — this is the
  * honest physics shape, not a fitted truth.
  */
+/** conditions → lap-time multiplier (1 = baseline/ideal). √grip cornering + power straights + wet step. */
+export function conditionFactor(grip: number, pace: number, wet: boolean, cornerFrac = 0.62): number {
+  const gripRatio = wet ? 0.8 : 0.86 + 0.14 * clamp(grip); // µ / µ_ideal
+  const powerRatio = 0.9 + 0.1 * clamp(pace); // straight-line performance
+  return cornerFrac * Math.pow(1 / gripRatio, 0.5) + (1 - cornerFrac) * Math.pow(1 / powerRatio, 0.5);
+}
 export function theoreticalLap(
   s: { grip: number; pace: number; mood: Mood },
   baselineSec: number,
   cornerFrac = 0.62
 ): Lap {
-  const gripRatio = s.mood === "wet" ? 0.8 : 0.86 + 0.14 * clamp(s.grip); // µ / µ_ideal
-  const powerRatio = 0.9 + 0.1 * clamp(s.pace); // straight-line performance
-  const factor = cornerFrac * Math.pow(1 / gripRatio, 0.5) + (1 - cornerFrac) * Math.pow(1 / powerRatio, 0.5);
+  const factor = conditionFactor(s.grip, s.pace, s.mood === "wet", cornerFrac);
   const sec = baselineSec * factor;
   return { sec, gapSec: sec - baselineSec, gapPct: (factor - 1) * 100 };
 }
