@@ -6,6 +6,8 @@
   import { theoreticalLap, fmtLap, defaultBaseline, lengthBaseline, KART_CLASS } from "./lib/laptime";
   import { PERSONAL, isPersonalTrack, personalLimit } from "./lib/personal";
   import MyLaps from "./components/MyLaps.svelte";
+  import { buildHours, highlights } from "./lib/dash";
+  import Dashboard from "./components/Dashboard.svelte";
   import { fmt, toggleUnits } from "./lib/units";
   import { airDensity, trackTemp, bestWindow } from "./lib/karting";
   import { ENGINES, ENGINE_MAP, jet, turnsStr, vsBaseline } from "./lib/jetting";
@@ -132,6 +134,21 @@
   $: baseSrcTag = baseInfo.src === "personal" ? "★ from your laps" : baseInfo.src === "length" && $app.trackLengthM ? `≈ ${$app.trackLengthM} m` : baseInfo.src === "set" ? "set" : "";
   $: lapL = LAP_LABEL[$lang] || LAP_LABEL.en;
   function scoreClick() { if (!$view) { openSearch(); return; } lapMode = !lapMode; localStorage.setItem("gc_lapmode", lapMode ? "1" : "0"); }
+
+  // ---- conditions dashboard (Apple-Weather-inspired) ----
+  let layoutMode = (localStorage.getItem("gc_layout") as "scroll" | "twopane" | "overlay") || "scroll";
+  const LAYOUTS = ["scroll", "twopane", "overlay"] as const;
+  let dashOpen = false; // overlay mode
+  let scrolled = false;
+  function cycleLayout() { layoutMode = LAYOUTS[(LAYOUTS.indexOf(layoutMode) + 1) % 3]; localStorage.setItem("gc_layout", layoutMode); dashOpen = false; }
+  $: dayHourly = $app.selDate ? $app.hourly[$app.selDate] : null;
+  $: dashHours = dayHourly ? buildHours(dayHourly, baseline) : [];
+  $: nowHour = $view ? ($view.live ? trackNow($app.tzOffset).h : $view.selHour) : 12;
+  $: hl = dashHours.length ? highlights(dashHours, nowHour) : [];
+  $: sun = $view && $app.data ? { rise: hm($app.data.daily.sunrise[$view.idx]), set: hm($app.data.daily.sunset[$view.idx]) } : null;
+  function hm(iso: string) { const t = (iso || "").split("T")[1] || ""; return t.slice(0, 5); }
+  function onPaneScroll(e: Event) { scrolled = (e.target as HTMLElement).scrollTop > 80; }
+  $: if (typeof document !== "undefined") document.body.classList.toggle("lay-twopane", layoutMode === "twopane");
 
   function onHour(e: Event) { setHour(+(e.target as HTMLInputElement).value); }
   function dayScore(i: number) { return $app.data ? scoreOf(dayW($app.data, i)).s10 : 0; }
@@ -264,6 +281,16 @@
 <Fx mode={skyOut.fxMode} precip={$view ? $view.w.precip : 0} wind={windVal} dark={!skyOut.lightSky} />
 <div class="vignette"></div>
 
+{#if layoutMode === "twopane"}
+  <aside class="sidebar">
+    <div class="sb-title">tracks</div>
+    {#each $recentsStore as r}<button class="sb-item" class:cur={Math.abs(r.lat - ($app.lat ?? 0)) < 1e-3 && Math.abs(r.lon - ($app.lon ?? 0)) < 1e-3} on:click={() => pick(r)}><span class="sb-nm">{r.name}</span></button>{/each}
+    <div class="sb-title">featured</div>
+    {#each FEATURED as f}<button class="sb-item" on:click={() => pick(f)}><span class="sb-nm">{f.name}</span><span class="sb-sub">{f.sub}</span></button>{/each}
+  </aside>
+{/if}
+
+<div class="rightpane" class:scrollable={layoutMode !== "overlay"} on:scroll={onPaneScroll}>
 <div class="stage">
   <div class="topbar">
     <div class="topleft">
@@ -304,10 +331,30 @@
       <RainTimeline hd={curHourly} {fromHour} live={$view.live} />
     {/if}
   </div>
+
+  <div class="blurb" on:click={onBlurbClick} role="presentation">{@html tr("blurbHtml")}</div>
+  <div class="hint">{HINT_RECENTS[$lang] || HINT_RECENTS.en} · <b on:click={toggleTimeline} role="button" tabindex="0">▣ {tr("timeline")}</b> · <b on:click={toggleGraph} role="button" tabindex="0">📈 {tr("trends")}</b> · <b on:click={cycleLayout} role="button" tabindex="0">▭ {layoutMode}</b>{#if layoutMode === "overlay"} · <b on:click={() => (dashOpen = true)} role="button" tabindex="0">☷ conditions</b>{/if}</div>
 </div>
 
-<div class="blurb" on:click={onBlurbClick} role="presentation">{@html tr("blurbHtml")}</div>
-<div class="hint">{HINT_RECENTS[$lang] || HINT_RECENTS.en} · <b on:click={toggleTimeline} role="button" tabindex="0">▣ {tr("timeline")}</b> · <b on:click={toggleGraph} role="button" tabindex="0">📈 {tr("trends")}</b></div>
+{#if layoutMode !== "overlay" && $view}
+  <section class="dashwrap">
+    <Dashboard hours={dashHours} nowH={nowHour} live={$view.live} {hl} {sun} place={$app.name} />
+  </section>
+{/if}
+</div>
+
+{#if layoutMode === "overlay" && dashOpen && $view}
+  <div class="dashoverlay" on:click|self={() => (dashOpen = false)} role="presentation">
+    <div class="dashoverlay-inner">
+      <button class="dclose" on:click={() => (dashOpen = false)} aria-label="close">✕</button>
+      <Dashboard hours={dashHours} nowH={nowHour} live={$view.live} {hl} {sun} place={$app.name} />
+    </div>
+  </div>
+{/if}
+
+{#if scrolled && layoutMode !== "overlay"}
+  <div class="minihdr"><b>{$app.name}</b> · {lapMode && lap ? fmtLap(lap.sec) : scoreText + "/10"}</div>
+{/if}
 
 {#if quickOpen}
   <div class="popup anim-pop" bind:this={quickEl} style="left:{quickPos.left}px;top:{quickPos.top}px">

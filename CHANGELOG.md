@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.13 — Conditions dashboard (Apple-Weather-inspired)
+- **Highlights card** — plain-language karting summary from the day's hourly
+  (best grip window, rain timing, jetting note).
+- **Conditions switcher** — segmented control swapping a clean SVG panel between
+  **sky** (temp + cloud), **rain** (precip-intensity timeline), **wind**
+  (speed/gust + direction arrows) and **grip** (grip score + predicted lap over
+  the day) — the karting view no weather app has.
+- **Three layouts** to compare (switch via the hint): **scroll** (dashboard
+  below the glance, hero collapses to a sticky pill), **two-pane** (sidebar of
+  tracks + detail), **overlay** (clean glance + a ☷ conditions card).
+- Adaptive time/weather background carries through. Hourly fetch now includes
+  wind direction.
+
 ## v0.11 — Physics lap model + real X30 Senior baselines
 - Replaced the linear lap penalty with a **physics-grounded** model: corner
   speed ∝ √grip, weighted by a cornering fraction (karts are ~62% cornering),

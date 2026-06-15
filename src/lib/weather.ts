@@ -13,7 +13,7 @@ export interface Weather {
 }
 export interface Hourly {
   time: string[]; temp: number[]; feels: number[]; precip: number[]; code: number[];
-  cloud: number[]; wind: number[]; gust: number[]; humidity: number[]; pressure: number[];
+  cloud: number[]; wind: number[]; gust: number[]; humidity: number[]; pressure: number[]; dir: number[];
 }
 
 const wxCache = new Map<string, { t: number; j: Weather }>();
@@ -33,13 +33,13 @@ export async function fetchWeather(lat: number, lon: number): Promise<Weather> {
 
 export async function fetchHourly(lat: number, lon: number, date: string): Promise<Hourly> {
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
-    + `&hourly=temperature_2m,apparent_temperature,precipitation,weather_code,cloud_cover,wind_speed_10m,wind_gusts_10m,relative_humidity_2m,surface_pressure`
+    + `&hourly=temperature_2m,apparent_temperature,precipitation,weather_code,cloud_cover,wind_speed_10m,wind_gusts_10m,wind_direction_10m,relative_humidity_2m,surface_pressure`
     + `&start_date=${date}&end_date=${date}&wind_speed_unit=kmh&timezone=auto`;
   const H = (await (await fetch(url)).json()).hourly || {};
   return {
     time: H.time || [], temp: H.temperature_2m || [], feels: H.apparent_temperature || [], precip: H.precipitation || [],
     code: H.weather_code || [], cloud: H.cloud_cover || [], wind: H.wind_speed_10m || [], gust: H.wind_gusts_10m || [],
-    humidity: H.relative_humidity_2m || [], pressure: H.surface_pressure || [],
+    humidity: H.relative_humidity_2m || [], pressure: H.surface_pressure || [], dir: H.wind_direction_10m || [],
   };
 }
 
@@ -50,7 +50,7 @@ export function liveW(d: Weather): W {
 }
 export function hourW(hd: Hourly, i: number): W {
   return { temp: hd.temp[i], feels: hd.feels[i], wind: hd.wind[i], gust: hd.gust[i], precip: hd.precip[i],
-    code: hd.code[i], cloud: hd.cloud[i], humidity: hd.humidity[i], pressure: hd.pressure[i] };
+    code: hd.code[i], cloud: hd.cloud[i], humidity: hd.humidity[i], pressure: hd.pressure[i], dir: hd.dir?.[i] };
 }
 export function dayW(d: Weather, i: number): W {
   const dl = d.daily; const tmid = (dl.temperature_2m_max[i] + dl.temperature_2m_min[i]) / 2;
