@@ -12,10 +12,9 @@
   import { airDensity, trackTemp, bestWindow } from "./lib/karting";
   import { ENGINES, ENGINE_MAP, jet, turnsStr, vsBaseline } from "./lib/jetting";
   import { COMPOUNDS, COMPOUND_MAP, coldPressure } from "./lib/tyres";
-  import { fetchWeather, liveW } from "./lib/weather";
+  import { fetchWeather, liveW, dayW, hourW, type Weather } from "./lib/weather";
   import { activate } from "./lib/a11y";
   import { trackNow, pad, lsGet } from "./lib/util";
-  import { dayW, hourW } from "./lib/weather";
   import { scoreOf, precipCat } from "./lib/score";
   import { computeSky, type SkyOut } from "./lib/sky";
   import Clouds from "./components/Clouds.svelte";
@@ -46,25 +45,30 @@
 
   // clock + countdown
   let timeStr = "--:--", tzStr = "", cdStr = "", cdLabel = "";
+  // cache the peak-grip scan so the 24-hour rescore runs on hour/day change, not every second
+  let _clkKey = "", _clkPeak: { hour: number; better: boolean } | null = null;
   function updateClock() {
     const s = get(app);
-    if (!s.data) { timeStr = "--:--"; tzStr = ""; cdStr = ""; cdLabel = ""; return; }
+    if (!s.data) { timeStr = "--:--"; tzStr = ""; cdStr = ""; cdLabel = ""; _clkKey = ""; return; }
     const p = trackNow(s.tzOffset);
     timeStr = pad(p.h) + ":" + pad(p.m); tzStr = s.tzAbbr || "";
-    if (s.live) {
-      const hd = s.todayISO ? s.hourly[s.todayISO] : null;
-      if (hd && hd.code.length) {
-        const g = hd.code.map((_, i) => scoreOf(hourW(hd, i)).s10);
-        let bi = -1, bg = -1; for (let i = p.h + 1; i < 24; i++) if (g[i] > bg) { bg = g[i]; bi = i; }
-        const ng = g[p.h] ?? 0;
-        if (bi >= 0 && bg > ng + 0.15) { const sec = (bi * 60 - p.min) * 60 - p.s; cdStr = `${pad(Math.floor(sec / 3600))}:${pad(Math.floor(sec / 60) % 60)}:${pad(sec % 60)}`; cdLabel = $trStore("toPeak"); }
-        else { cdStr = "✓"; cdLabel = $trStore("peakNow"); }
-      } else { cdStr = ""; cdLabel = ""; }
-    } else {
-      const hd = s.selDate ? s.hourly[s.selDate] : null;
-      if (hd && hd.code.length) { let bi = 12, bg = -1; for (let i = 0; i < hd.code.length; i++) { const gg = scoreOf(hourW(hd, i)).s10; if (gg > bg) { bg = gg; bi = i; } } cdStr = pad(bi) + ":00"; cdLabel = $trStore("peakGrip"); }
-      else { cdStr = ""; cdLabel = ""; }
+    const hd = s.live ? (s.todayISO ? s.hourly[s.todayISO] : null) : (s.selDate ? s.hourly[s.selDate] : null);
+    if (!hd || !hd.code.length) { cdStr = ""; cdLabel = ""; _clkKey = ""; return; }
+    const key = s.live ? "live:" + s.todayISO + "@" + p.h : "sel:" + s.selDate;
+    if (key !== _clkKey) {
+      _clkKey = key;
+      let bh = -1, bg = -Infinity, ng = 0;
+      for (let i = 0; i < hd.code.length; i++) {
+        const hour = hd.time[i] ? +hd.time[i].slice(11, 13) : i;
+        const sc = scoreOf(hourW(hd, i)).s10;
+        if (s.live) { if (hour === p.h) ng = sc; if (hour > p.h && sc > bg) { bg = sc; bh = hour; } }
+        else if (sc > bg) { bg = sc; bh = hour; }
+      }
+      _clkPeak = bh >= 0 ? { hour: bh, better: !s.live || bg > ng + 0.15 } : null;
     }
+    if (!s.live) { cdStr = _clkPeak ? pad(_clkPeak.hour) + ":00" : ""; cdLabel = _clkPeak ? $trStore("peakGrip") : ""; }
+    else if (_clkPeak && _clkPeak.better) { const sec = (_clkPeak.hour * 60 - p.min) * 60 - p.s; cdStr = `${pad(Math.floor(sec / 3600))}:${pad(Math.floor(sec / 60) % 60)}:${pad(sec % 60)}`; cdLabel = $trStore("toPeak"); }
+    else { cdStr = "✓"; cdLabel = $trStore("peakNow"); }
   }
   $: { void $app; void $lang; updateClock(); }
 
@@ -112,16 +116,15 @@
   // personalization (Shenzhen only — calibrated from the user's .xrk telemetry)
   let personalOn = localStorage.getItem("gc_personal") !== "0";
   let myLapsOpen = false;
-  $: isPersonal = $app.lat != null && isPersonalTrack($app.lat, $app.lon);
+  $: isPersonal = $app.lat != null && $app.lon != null && isPersonalTrack($app.lat, $app.lon);
   $: personalActive = personalOn && isPersonal;
   function togglePersonal() { personalOn = !personalOn; localStorage.setItem("gc_personal", personalOn ? "1" : "0"); }
 
   function computeBase(a: typeof $app, _b: number, personal: boolean): { sec: number | null; src: string } {
     if (a.lat == null) return { sec: null, src: "" };
-    if (personal) return { sec: personalLimit(a.selDate || new Date().toISOString().slice(0, 10)), src: "personal" };
-    const k = `gc_base:${a.lat.toFixed(3)},${a.lon?.toFixed(3)}`;
-    const ov = localStorage.getItem(k);
-    if (ov) return { sec: +ov, src: "set" };
+    const ov = localStorage.getItem(`gc_base:${a.lat.toFixed(3)},${a.lon?.toFixed(3)}`);
+    if (ov) return { sec: +ov, src: "set" }; // a manual baseline always wins, even in personal mode
+    if (personal) return { sec: personalLimit(a.selDate || trackNow(a.tzOffset).dateISO), src: "personal" };
     const known = defaultBaseline(a.name);
     if (known) return { sec: known, src: "typical" };
     if (a.trackLengthM) return { sec: lengthBaseline(a.trackLengthM), src: "length" };
@@ -151,7 +154,10 @@
   $: if (typeof document !== "undefined") document.body.classList.toggle("lay-twopane", layoutMode === "twopane");
 
   function onHour(e: Event) { setHour(+(e.target as HTMLInputElement).value); }
-  function dayScore(i: number) { return $app.data ? scoreOf(dayW($app.data, i)).s10 : 0; }
+  // per-day scores — recomputed once per forecast (data ref change), not on every hour-scrub
+  let _dsData: Weather | null = null, dayScores: number[] = [];
+  $: if ($app.data !== _dsData) { _dsData = $app.data; dayScores = $app.data ? $app.data.daily.time.map((_, i) => scoreOf(dayW($app.data!, i)).s10) : []; }
+  function dayScore(i: number) { return dayScores[i] ?? 0; }
   function fmtDay(ds: string) { return new Date(ds + "T00:00").toLocaleDateString($lang, { day: "numeric", month: "short" }); }
   function fmtFullDay(ds: string) { if (!ds) return ""; const d = new Date(ds + "T00:00"); if (isNaN(+d)) return ds; return d.toLocaleDateString($lang, { weekday: "short", day: "numeric", month: "short" }); }
   $: canNotify = typeof Notification !== "undefined";
@@ -190,7 +196,7 @@
     return { lat: +m[1], lon: +m[2], date: date || null, name: decodeURIComponent(p.get("n") || "track") };
   }
   function buildHash(s: typeof $app) {
-    if (s.lat == null) return "";
+    if (s.lat == null || s.lon == null) return "";
     return `#/${s.lat.toFixed(4)},${s.lon.toFixed(4)}/${s.selDate || ""}?n=${encodeURIComponent(s.name)}`;
   }
   let lastHash = "";
@@ -203,7 +209,7 @@
     if (location.hash === lastHash) return;
     const r = parseHash(); if (!r) return;
     const s = get(app);
-    if (s.lat != null && Math.abs(s.lat - r.lat) < 1e-4 && Math.abs(s.lon - r.lon) < 1e-4) return;
+    if (s.lat != null && s.lon != null && Math.abs(s.lat - r.lat) < 1e-4 && Math.abs(s.lon - r.lon) < 1e-4) return;
     await loadPlace(r.lat, r.lon, r.name);
     if (r.date) { const idx = get(app).data?.daily.time.indexOf(r.date) ?? -1; if (idx >= 0) selectDay(idx); }
   }
@@ -225,14 +231,14 @@
   function closeCompare() { compareOpen = false; compare = null; }
 
   // ---- next strong day (forecast scan) ----
-  $: nextGood = ((_l: string) => {
+  $: nextGood = (() => {
+    void $lang; // re-label on language change
     const d = $app.data; if (!d) return null;
-    for (let i = $app.todayIdx + 1; i < d.daily.time.length; i++) {
-      const s = scoreOf(dayW(d, i)).s10;
-      if (s >= 7.5) { const ds = d.daily.time[i]; return { date: ds, label: fmtFullDay(ds), idx: i, s }; }
+    for (let i = $app.todayIdx + 1; i < dayScores.length; i++) {
+      if (dayScores[i] >= 7.5) { const ds = d.daily.time[i]; return { date: ds, label: fmtFullDay(ds), idx: i, s: dayScores[i] }; }
     }
     return null;
-  })($lang);
+  })();
   async function notifyMe() {
     if (!("Notification" in window) || !nextGood) return;
     let perm = Notification.permission;
@@ -247,8 +253,9 @@
   let copied = false;
   function shareLink() {
     quickOpen = false;
-    try { navigator.clipboard?.writeText(location.href); } catch {}
-    copied = true; setTimeout(() => (copied = false), 1600);
+    const p = navigator.clipboard?.writeText(location.href);
+    if (!p) return; // no clipboard API / blocked — don't claim success
+    p.then(() => { copied = true; setTimeout(() => (copied = false), 1600); }).catch(() => {});
   }
 
   onMount(() => {

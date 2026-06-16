@@ -54,7 +54,7 @@ export const PSESSIONS: PSession[] = [
 ];
 
 const DAY = 86400000;
-function daysSince(dateISO: string): number {
+export function daysSince(dateISO: string): number {
   return Math.round((Date.parse(dateISO + "T00:00") - Date.parse(PERSONAL.d0 + "T00:00")) / DAY);
 }
 /** is this place the Shenzhen track the personal data covers? (~2.5 km) */

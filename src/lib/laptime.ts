@@ -69,7 +69,8 @@ export function theoreticalLap(
 
 /** seconds → "48.3" or "1:08.3" */
 export function fmtLap(sec: number): string {
-  const m = Math.floor(sec / 60);
-  const s = sec - m * 60;
+  const total = Math.round(sec * 10) / 10; // round to 0.1 first so 59.96 → 60.0 carries into the minute
+  const m = Math.floor(total / 60);
+  const s = total - m * 60;
   return m > 0 ? m + ":" + s.toFixed(1).padStart(4, "0") : s.toFixed(1);
 }

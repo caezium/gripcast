@@ -6,11 +6,13 @@
   export let color = "150,156,170";
 
   let layer: HTMLDivElement;
+  let anims: Animation[] = [];
+  const BASE_DUR = 42; // drift duration at wind 0; wind scales playbackRate, not a rebuild
+  const speed = (w: number) => BASE_DUR / Math.max(7, Math.min(42, 42 - w * 1.1));
   function build() {
     if (!layer) return;
-    layer.innerHTML = "";
+    layer.innerHTML = ""; anims = [];
     const W = innerWidth, H = innerHeight;
-    const dur = Math.max(7, Math.min(42, 42 - wind * 1.1));
     for (let i = 0; i < count; i++) {
       const b = document.createElement("div");
       b.className = "cloud-blob";
@@ -19,18 +21,21 @@
       b.style.top = Math.random() * H * 0.92 + "px"; b.style.left = Math.random() * W - cw * 0.3 + "px";
       b.style.opacity = (0.26 + Math.random() * 0.2).toFixed(2);
       b.style.filter = `url(#cw${i % 3}) blur(${(11 + Math.random() * 5).toFixed(1)}px)`;
-      const dx = 180 + Math.random() * 240, d = dur * (0.8 + Math.random() * 0.5);
+      const dx = 180 + Math.random() * 240, d = BASE_DUR * (0.8 + Math.random() * 0.5);
       if (!reducedMotion) {
-        b.animate(
+        const a = b.animate(
           [{ transform: `translateX(${-dx}px)` }, { transform: `translateX(${dx}px)` }],
           { duration: d * 1000, direction: "alternate", iterations: Infinity, easing: "linear", delay: -Math.random() * d * 1000 }
         );
+        a.playbackRate = speed(wind);
+        anims.push(a);
       }
       layer.appendChild(b);
     }
   }
   onMount(build);
-  $: if (layer) { void count; void wind; build(); }
+  $: if (layer) { void count; build(); }                                   // rebuild only when cloud count changes
+  $: { const r = speed(wind); for (const a of anims) a.playbackRate = r; }  // wind only nudges drift speed in place
 </script>
 
 <div class="cloud-layer" bind:this={layer} style="--cloud:{color}"></div>

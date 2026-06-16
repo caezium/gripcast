@@ -40,9 +40,11 @@ export function tyreArrow(trackTempC: number): "↑" | "—" | "↓" {
 export function bestWindow(hd: Hourly | null, fromHour: number) {
   if (!hd || hd.code.length < 2) return null;
   let best = { start: fromHour, end: fromHour + 2, score: -1 };
-  for (let h = Math.max(0, fromHour); h < hd.code.length - 1; h++) {
-    const avg = (scoreOf(hourW(hd, h)).s10 + scoreOf(hourW(hd, h + 1)).s10) / 2;
-    if (avg > best.score) best = { start: h, end: h + 2, score: avg };
+  for (let i = 0; i < hd.code.length - 1; i++) {
+    const hour = hd.time[i] ? +hd.time[i].slice(11, 13) : i;
+    if (hour < fromHour) continue;
+    const avg = (scoreOf(hourW(hd, i)).s10 + scoreOf(hourW(hd, i + 1)).s10) / 2;
+    if (avg > best.score) best = { start: hour, end: hour + 2, score: avg };
   }
   return best.score < 0 ? null : best;
 }

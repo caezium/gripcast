@@ -9,7 +9,7 @@
   $: tr = $trStore;
 
   let hours: { h: number; mm: number }[] = [];
-  $: hours = hd ? hd.precip.map((mm, h) => ({ h, mm: mm || 0 })) : [];
+  $: hours = hd ? hd.precip.map((mm, i) => ({ h: hd!.time[i] ? +hd!.time[i].slice(11, 13) : i, mm: mm || 0 })) : [];
   $: maxMm = Math.max(0.6, ...hours.map((x) => x.mm));
   $: start = live ? fromHour : 0;
   $: showBars = hours.some((x) => x.mm >= 0.1);
@@ -18,11 +18,10 @@
     if (!hrs || !hrs.length) return null;
     const rainAhead = hrs.filter((x) => x.h >= st && x.mm >= 0.1);
     if (!rainAhead.length) return null; // fully dry from here on — stay quiet
-    const rainingNow = (hrs[st]?.mm || 0) >= 0.1;
+    const rainingNow = (hrs.find((x) => x.h === st)?.mm || 0) >= 0.1;
     if (rainingNow) {
-      let dry = -1;
-      for (let h = st; h < 24; h++) if ((hrs[h]?.mm || 0) < 0.1) { dry = h; break; }
-      return dry < 0 ? { key: "rainAllDay" } : { key: "rainUntil", time: pad(dry) + ":00" };
+      const dry = hrs.find((x) => x.h >= st && x.mm < 0.1);
+      return !dry ? { key: "rainAllDay" } : { key: "rainUntil", time: pad(dry.h) + ":00" };
     }
     return { key: "dryUntil", time: pad(rainAhead[0].h) + ":00" };
   }

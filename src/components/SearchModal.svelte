@@ -63,6 +63,7 @@
     });
   }
   function choose(p: Place) { dispatch(pickMode === "compare" ? "compare" : "select", { lat: p.lat, lon: p.lon, name: p.name }); }
+  function chooseMyLoc() { if (myLoc) choose({ name: tr("myLoc"), lat: myLoc.lat, lon: myLoc.lon }); }
   function clear() { q = ""; screen = "browse"; selIdx = -1; inputEl?.focus(); }
   export function triggerGeo() { doGeo(); }
 
@@ -76,7 +77,11 @@
   function onKey(e: KeyboardEvent) {
     if (e.key === "ArrowDown") { e.preventDefault(); selIdx = Math.min(selIdx + 1, navRows.length - 1); }
     else if (e.key === "ArrowUp") { e.preventDefault(); selIdx = Math.max(selIdx - 1, 0); }
-    else if (e.key === "Enter") { e.preventDefault(); const r = navRows[selIdx] || navRows[0]; if (r) { if (r.geo) doGeo(); else choose(r); } }
+    else if (e.key === "Enter") {
+      e.preventDefault();
+      if (selIdx >= 0) { const r = navRows[selIdx]; if (r) { if (r.geo) doGeo(); else choose(r); } }
+      else if (screen === "results" || screen === "nearby") { const r = navRows.find((x: any) => !x.geo); if (r) choose(r); }
+    }
   }
 </script>
 
@@ -109,7 +114,7 @@
             <div class="secthead"><span class="tw">▾</span>{tr("featured")}<span class="cnt">{FEATURED.length}</span></div>
             {#each FEATURED as f}<div class="row" on:click={() => choose(f)} role="button" tabindex="-1"><span class="ic">🏁</span><span class="nm">{f.name}</span><span class="sub">{f.sub}</span></div>{/each}
           {:else if screen === "nearby"}
-            {#if myLoc}<div class="row" on:click={() => choose({ name: tr("myLoc"), lat: myLoc.lat, lon: myLoc.lon })} role="button" tabindex="-1"><span class="ic">📍</span><span class="nm">{tr("myLoc")}</span></div>{/if}
+            {#if myLoc}<div class="row" on:click={chooseMyLoc} role="button" tabindex="-1"><span class="ic">📍</span><span class="nm">{tr("myLoc")}</span></div>{/if}
             <div class="secthead"><span class="tw">▾</span>{tr("tracks")}<span class="cnt">{near.length}</span>{#if trackLoading}<span class="mini"></span>{/if}</div>
             {#each near as r}<div class="row" on:click={() => choose(r)} role="button" tabindex="-1"><span class="ic">🏁</span><span class="nm">{r.name}</span>{#if myLoc}<span class="dist">{dist(myLoc.lat, myLoc.lon, r.lat, r.lon).toFixed(0)} km</span>{/if}</div>{/each}
             {#if !near.length && !trackLoading}<div class="empty">{tr("noMatch")}</div>{/if}
