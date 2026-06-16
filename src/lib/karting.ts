@@ -15,13 +15,6 @@ export function airDensity(tempC: number, pressureHpa?: number, humidity?: numbe
   return { rho, relPct, da };
 }
 
-/** 2-stroke jetting direction: denser air (more O2) -> richer; thinner -> leaner. */
-export function jetting(relPct: number): { dir: "richen" | "lean" | "baseline"; d: number } {
-  const d = relPct - 100;
-  if (Math.abs(d) < 1.2) return { dir: "baseline", d };
-  return { dir: d > 0 ? "richen" : "lean", d };
-}
-
 /** Rough track-surface temp: air + solar gain (clear daytime) or slightly below air at night. */
 export function trackTemp(tempC: number, cloud?: number, daylight = true): number {
   if (!daylight) return tempC - 1;
@@ -29,20 +22,15 @@ export function trackTemp(tempC: number, cloud?: number, daylight = true): numbe
   return tempC + solar * 10;
 }
 
-/** Cold-set tyre-pressure nudge from track temp: cold -> raise, hot -> drop. */
-export function tyreArrow(trackTempC: number): "↑" | "—" | "↓" {
-  if (trackTempC < 15) return "↑";
-  if (trackTempC > 38) return "↓";
-  return "—";
-}
-
 /** Best 2-hour window (highest average score) in the rest of the day. */
 export function bestWindow(hd: Hourly | null, fromHour: number) {
   if (!hd || hd.code.length < 2) return null;
   let best = { start: fromHour, end: fromHour + 2, score: -1 };
-  for (let h = Math.max(0, fromHour); h < hd.code.length - 1; h++) {
-    const avg = (scoreOf(hourW(hd, h)).s10 + scoreOf(hourW(hd, h + 1)).s10) / 2;
-    if (avg > best.score) best = { start: h, end: h + 2, score: avg };
+  for (let i = 0; i < hd.code.length - 1; i++) {
+    const hour = hd.time[i] ? +hd.time[i].slice(11, 13) : i;
+    if (hour < fromHour) continue;
+    const avg = (scoreOf(hourW(hd, i)).s10 + scoreOf(hourW(hd, i + 1)).s10) / 2;
+    if (avg > best.score) best = { start: hour, end: hour + 2, score: avg };
   }
   return best.score < 0 ? null : best;
 }

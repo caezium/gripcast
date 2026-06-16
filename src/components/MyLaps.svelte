@@ -1,14 +1,12 @@
 <script lang="ts">
-  import { PERSONAL, PSESSIONS, personalLimit } from "../lib/personal";
-  import { conditionFactor } from "../lib/laptime";
-  import { fmtLap } from "../lib/laptime";
+  import { PERSONAL, PSESSIONS, personalLimit, daysSince } from "../lib/personal";
+  import { conditionFactor, fmtLap } from "../lib/laptime";
+  import { clamp } from "../lib/util";
 
-  const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x));
   const d0ms = Date.parse(PERSONAL.d0 + "T00:00");
-  const days = (d: string) => Math.round((Date.parse(d + "T00:00") - d0ms) / 86400000);
-  const paceFromTemp = (t: number) => clamp(1 - Math.abs(t - 12) / 28, 0, 1);
+  const paceFromTemp = (t: number) => clamp(1 - Math.abs(t - 12) / 28);
 
-  const pts = PSESSIONS.map((s) => ({ ...s, day: days(s.d) }));
+  const pts = PSESSIONS.map((s) => ({ ...s, day: daysSince(s.d) }));
   const maxDay = Math.max(...pts.map((p) => p.day));
   const YMIN = 42, YMAX = 54;
 
@@ -22,10 +20,12 @@
   const limLine = `M${xT(0)} ${yT(PERSONAL.a)} L${xT(maxDay)} ${yT(PERSONAL.a + PERSONAL.b * maxDay)}`;
   // conditions: normalise each lap to the *current* limit (removes the date trend)
   const norm = pts.map((p) => ({ ...p, ny: p.best * (PERSONAL.limitNow / personalLimit(p.d)) }));
-  // model curve: limitNow × conditionFactor(grip)
+  // model curve: limitNow × the SAME conditionFactor the app runs — pace at this track's
+  // representative temp, with the wet step where the scorer actually flips to wet (grip ≈ 0.575).
+  const PACE_REF = paceFromTemp(26);
   const curve = Array.from({ length: 41 }, (_, i) => {
     const g = i / 40;
-    return `${i ? "L" : "M"}${xG(g).toFixed(1)} ${yT(PERSONAL.limitNow * conditionFactor(g, 0.46, g < 0.45)).toFixed(1)}`;
+    return `${i ? "L" : "M"}${xG(g).toFixed(1)} ${yT(PERSONAL.limitNow * conditionFactor(g, PACE_REF, g < 0.575)).toFixed(1)}`;
   }).join(" ");
 
   const improveWk = (PERSONAL.b * 7).toFixed(2);

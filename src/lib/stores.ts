@@ -1,6 +1,6 @@
 import { writable, derived, get } from "svelte/store";
-import { fetchWeather, fetchHourly, liveW, hourW, peakHour, type Weather, type Hourly } from "./weather";
-import { trackLength } from "./geo";
+import { fetchWeather, fetchHourly, liveW, hourW, hourIndex, peakHour, type Weather, type Hourly } from "./weather";
+import { trackLength, type Place } from "./geo";
 import { scoreOf, type W } from "./score";
 import { computeSky, phaseAt, type SkyOut, type Phase } from "./sky";
 import { trackNow, minFromISO, lsSet } from "./util";
@@ -22,7 +22,9 @@ export interface ViewModel { w: W; idx: number; phase: Phase; sky: SkyOut; score
 export const view = derived(app, ($a): ViewModel | null => {
   if (!$a.data || !$a.selDate) return null;
   const hd = $a.hourly[$a.selDate];
-  const w = $a.live ? liveW($a.data) : hd ? hourW(hd, $a.selHour) : liveW($a.data);
+  let w: W;
+  if ($a.live || !hd || !hd.code.length) w = liveW($a.data);
+  else { const hi = hourIndex(hd, $a.selHour); w = hi >= 0 ? hourW(hd, hi) : liveW($a.data); }
   const idx = $a.data.daily.time.indexOf($a.selDate);
   const sr = minFromISO($a.data.daily.sunrise[idx]);
   const ss = minFromISO($a.data.daily.sunset[idx]);
@@ -34,7 +36,7 @@ export const view = derived(app, ($a): ViewModel | null => {
 
 /* ---------- recents / last ---------- */
 export interface RecentPlace { name: string; lat: number; lon: number; }
-export function recents(): RecentPlace[] { try { return JSON.parse(localStorage.getItem("gc_recents") || "[]"); } catch { return []; } }
+export function recents(): RecentPlace[] { try { const v = JSON.parse(localStorage.getItem("gc_recents") || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } }
 function pushRecent(it: RecentPlace) {
   let r = recents().filter((x) => Math.abs(x.lat - it.lat) > 1e-4 || Math.abs(x.lon - it.lon) > 1e-4);
   r.unshift({ name: it.name, lat: it.lat, lon: it.lon });
@@ -42,7 +44,7 @@ function pushRecent(it: RecentPlace) {
 }
 export const recentsStore = writable<RecentPlace[]>(recents());
 
-export const FEATURED: RecentPlace[] & { sub?: string }[] = [
+export const FEATURED: Place[] = [
   { name: "South Garda Karting", sub: "Lonato, IT", lat: 45.4250, lon: 10.5061 },
   { name: "Franciacorta Karting", sub: "Castrezzato, IT", lat: 45.5519, lon: 9.9897 },
   { name: "Adria Karting Raceway", sub: "Adria, IT", lat: 45.0469, lon: 12.1556 },
@@ -53,28 +55,33 @@ export const FEATURED: RecentPlace[] & { sub?: string }[] = [
   { name: "New Castle Motorsports", sub: "Indiana, US", lat: 39.9320, lon: -85.3400 },
   { name: "Suzuka Circuit", sub: "Suzuka, JP", lat: 34.8430, lon: 136.5410 },
   { name: "Bahrain Karting", sub: "Sakhir, BH", lat: 26.0330, lon: 50.5110 },
-] as any;
+];
 
 /* ---------- actions ---------- */
+// monotonic load token — a newer loadPlace invalidates older in-flight responses (no stale overwrite)
+let placeSeq = 0;
 export async function loadPlace(lat: number, lon: number, name: string) {
+  const seq = ++placeSeq;
   app.update((s) => ({ ...s, lat, lon, name, data: null, hourly: {}, error: false, loading: true, trackLengthM: null }));
   pushRecent({ name, lat, lon }); recentsStore.set(recents());
   lsSet("gc_last", { name, lat, lon }, 1e12);
   // circuit length (for length-derived lap baselines) — non-blocking
   trackLength(lat, lon).then((m) => {
-    if (m) app.update((s) => (s.lat === lat && s.lon === lon ? { ...s, trackLengthM: m } : s));
+    if (m && seq === placeSeq) app.update((s) => ({ ...s, trackLengthM: m }));
   });
   try {
     const d = await fetchWeather(lat, lon);
+    if (seq !== placeSeq) return;
     const tzOffset = d.utc_offset_seconds || 0;
     const todayISO = trackNow(tzOffset).dateISO;
     let ti = (d.daily?.time || []).indexOf(todayISO); if (ti < 0) ti = 60; d.todayIdx = ti;
     const p = trackNow(tzOffset);
     app.update((s) => ({ ...s, data: d, tzOffset, tzAbbr: d.timezone_abbreviation || "", todayISO, todayIdx: ti, selDate: todayISO, selHour: p.h, live: true, loading: false }));
     const hd = await fetchHourly(lat, lon, todayISO);
+    if (seq !== placeSeq) return;
     app.update((s) => ({ ...s, hourly: { ...s.hourly, [todayISO]: hd } }));
   } catch {
-    app.update((s) => ({ ...s, error: true, loading: false }));
+    if (seq === placeSeq) app.update((s) => ({ ...s, error: true, loading: false }));
   }
 }
 export function setLive() {
@@ -84,8 +91,11 @@ export async function selectDay(i: number) {
   const s = get(app); if (!s.data) return;
   if (i === s.todayIdx) return setLive();
   const date = s.data.daily.time[i];
+  const seq = placeSeq;
   app.update((st) => ({ ...st, live: false, selDate: date }));
-  const hd = s.hourly[date] || (await fetchHourly(s.lat!, s.lon!, date));
+  let hd = s.hourly[date];
+  if (!hd) { try { hd = await fetchHourly(s.lat!, s.lon!, date); } catch { return; } }
+  if (seq !== placeSeq) return;
   app.update((st) => ({ ...st, hourly: { ...st.hourly, [date]: hd }, selHour: peakHour(hd) }));
 }
 export async function setHour(h: number) {
@@ -93,7 +103,10 @@ export async function setHour(h: number) {
   const live = s.selDate === s.todayISO && h === p.h;
   app.update((st) => ({ ...st, selHour: h, live }));
   if (!live && s.selDate && !s.hourly[s.selDate]) {
-    const hd = await fetchHourly(s.lat!, s.lon!, s.selDate);
+    const seq = placeSeq;
+    let hd: Hourly;
+    try { hd = await fetchHourly(s.lat!, s.lon!, s.selDate); } catch { return; }
+    if (seq !== placeSeq) return;
     app.update((st) => ({ ...st, hourly: { ...st.hourly, [s.selDate!]: hd } }));
   }
 }

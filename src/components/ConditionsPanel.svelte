@@ -20,7 +20,8 @@
   $: n = hours.length || 1;
   const xh = (h: number) => L + (R - L) * (n > 1 ? h / (n - 1) : 0);
   const yv = (v: number, mn: number, mx: number) => B - (B - T) * ((v - mn) / (mx - mn || 1));
-  $: nowX = xh(Math.min(nowH, n - 1));
+  $: nowI = (() => { const k = hours.findIndex((p) => p.h === nowH); return k >= 0 ? k : Math.min(nowH, n - 1); })();
+  $: nowX = xh(nowI);
 
   function path(vals: number[], mn: number, mx: number) {
     return vals.map((v, i) => `${i ? "L" : "M"}${xh(i).toFixed(1)} ${yv(v, mn, mx).toFixed(1)}`).join(" ");
@@ -44,7 +45,7 @@
   $: laps = hours.map((p) => p.lap ?? 0);
   $: lMin = Math.min(...laps.filter((x) => x > 0), 999);
   $: lMax = laps.length ? Math.max(...laps) : 0;
-  $: cur = hours[Math.min(nowH, n - 1)];
+  $: cur = hours[nowI];
 
   function pcol(mm: number) { return mm >= 4 ? "rgba(90,130,200,.9)" : mm >= 1 ? "rgba(110,150,210,.78)" : "rgba(140,175,225,.6)"; }
   function gcol(s: number) { return s >= 7.5 ? "#46dc96" : s >= 6 ? "#7ac8a0" : s >= 4.5 ? "#e8b14a" : "#e8895a"; }
@@ -75,7 +76,7 @@
       <path d={path(temps, tMin - 1, tMax + 1)} fill="none" stroke="rgb(var(--accent))" stroke-width="2" />
       {#each [tMin, tMax] as tv}<text x={L - 4} y={yv(tv, tMin - 1, tMax + 1) + 3} text-anchor="end" font-size="9" fill="currentColor">{$fmt.temp(tv)}</text>{/each}
     {:else if view === "precip"}
-      {#each precs as p, i}{#if p > 0.02}<rect x={xh(i) - 4} y={yv((p / pMax) * pMax, 0, pMax)} width="8" height={B - yv(p, 0, pMax)} rx="2" fill={pcol(p)} />{/if}{/each}
+      {#each precs as p, i}{#if p > 0.02}<rect x={xh(i) - 4} y={yv(p, 0, pMax)} width="8" height={B - yv(p, 0, pMax)} rx="2" fill={pcol(p)} />{/if}{/each}
       <text x={L - 4} y={yv(pMax, 0, pMax) + 3} text-anchor="end" font-size="9" fill="currentColor">{pMax.toFixed(1)}</text>
       <text x={L - 4} y={B} text-anchor="end" font-size="9" fill="currentColor">0</text>
     {:else if view === "wind"}

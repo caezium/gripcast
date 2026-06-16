@@ -15,7 +15,9 @@ export async function photon(q: string, bias?: { lat: number; lon: number }, lan
   let u = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=10&lang=${["en", "de", "fr"].includes(lang) ? lang : "en"}`;
   if (bias) u += `&lat=${bias.lat}&lon=${bias.lon}`;
   const j = await (await fetch(u)).json();
-  return (j.features || []).map(classifyPhoton);
+  return (j.features || [])
+    .filter((f: any) => f?.geometry?.type === "Point" && Array.isArray(f.geometry?.coordinates))
+    .map(classifyPhoton);
 }
 
 const OVERPASS_EPS = [
@@ -26,9 +28,16 @@ const OVERPASS_EPS = [
 ];
 const opCache = new Map<string, any>();
 
+/** djb2 hash → short stable key; the full query varies only after a long shared prefix, so hash all of it. */
+function hashStr(s: string): string {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
 async function overpassFetch(ql: string, ms = 10000): Promise<any> {
   if (opCache.has(ql)) return opCache.get(ql);
-  const lk = "gc_op_" + ql.length + "_" + ql.slice(0, 40).replace(/\W/g, "");
+  const lk = "gc_op_" + hashStr(ql);
   const cached = lsGet<any>(lk);
   if (cached) { opCache.set(ql, cached); return cached; }
   const data = "?data=" + encodeURIComponent(ql);
@@ -87,7 +96,11 @@ export async function trackLength(lat: number, lon: number): Promise<number | nu
 export const dist = haversine;
 export function dedupe(arr: Place[]): Place[] {
   const seen = new Set<string>();
-  return arr.filter((x) => { const k = x.lat.toFixed(3) + "," + x.lon.toFixed(3); if (seen.has(k)) return false; seen.add(k); return true; });
+  return arr.filter((x) => {
+    if (x.lat == null || x.lon == null) return false;
+    const k = x.lat.toFixed(3) + "," + x.lon.toFixed(3);
+    if (seen.has(k)) return false; seen.add(k); return true;
+  });
 }
 export function parseCoords(q: string): { lat: number; lon: number } | null {
   const m = q.match(/^\s*(-?\d{1,2}(?:\.\d+)?)\s*[, ]\s*(-?\d{1,3}(?:\.\d+)?)\s*$/);

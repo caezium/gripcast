@@ -18,7 +18,7 @@ export function buildHours(hd: Hourly, baseline: number | null): HourPt[] {
     const air = w.pressure != null ? airDensity(w.temp, w.pressure, w.humidity) : null;
     const f = conditionFactor(s.grip, s.pace, s.mood === "wet");
     out.push({
-      h: i, temp: w.temp, feels: w.feels, cloud: w.cloud, precip: w.precip, wind: w.wind, gust: w.gust,
+      h: hd.time[i] ? +hd.time[i].slice(11, 13) : i, temp: w.temp, feels: w.feels, cloud: w.cloud, precip: w.precip, wind: w.wind, gust: w.gust,
       dir: w.dir ?? 0, code: w.code, grip: s.grip, pace: s.pace, score: s.s10, mood: s.mood,
       lap: baseline ? baseline * f : null, rad: air ? air.relPct : null,
     });
@@ -34,6 +34,7 @@ export function highlights(hours: HourPt[], nowH: number): Highlight[] {
   if (!hours.length) return out;
   const ahead = hours.filter((p) => p.h >= nowH);
   const day = ahead.length ? ahead : hours;
+  const now = hours.find((p) => p.h === nowH);
 
   // 1) best 2-hour grip window
   let bi = day[0].h, bv = -1;
@@ -47,7 +48,7 @@ export function highlights(hours: HourPt[], nowH: number): Highlight[] {
   const rainAhead = day.filter((p) => p.precip >= 0.3);
   if (!rainAhead.length) out.push({ icon: "☀️", text: "Dry the rest of the day" });
   else {
-    const rainingNow = (hours[nowH]?.precip ?? 0) >= 0.3;
+    const rainingNow = (now?.precip ?? 0) >= 0.3;
     if (rainingNow) {
       const dry = day.find((p) => p.precip < 0.3);
       out.push({ icon: "🌧️", text: dry ? `Wet now — drying around ${pad(dry.h)}:00` : "Wet all day — wet-line setup" });
@@ -57,7 +58,7 @@ export function highlights(hours: HourPt[], nowH: number): Highlight[] {
   }
 
   // 3) jetting / air density note
-  const rad = hours[nowH]?.rad ?? null;
+  const rad = now?.rad ?? null;
   if (rad != null) {
     const txt = rad > 101.2 ? `Dense air (${rad.toFixed(0)}%) — jet richer` : rad < 98.8 ? `Thin air (${rad.toFixed(0)}%) — jet leaner` : `Air density ${rad.toFixed(0)}% — near baseline`;
     out.push({ icon: "⚙️", text: txt });
