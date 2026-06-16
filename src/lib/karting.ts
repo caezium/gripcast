@@ -15,25 +15,11 @@ export function airDensity(tempC: number, pressureHpa?: number, humidity?: numbe
   return { rho, relPct, da };
 }
 
-/** 2-stroke jetting direction: denser air (more O2) -> richer; thinner -> leaner. */
-export function jetting(relPct: number): { dir: "richen" | "lean" | "baseline"; d: number } {
-  const d = relPct - 100;
-  if (Math.abs(d) < 1.2) return { dir: "baseline", d };
-  return { dir: d > 0 ? "richen" : "lean", d };
-}
-
 /** Rough track-surface temp: air + solar gain (clear daytime) or slightly below air at night. */
 export function trackTemp(tempC: number, cloud?: number, daylight = true): number {
   if (!daylight) return tempC - 1;
   const solar = 1 - (cloud ?? 0) / 100;
   return tempC + solar * 10;
-}
-
-/** Cold-set tyre-pressure nudge from track temp: cold -> raise, hot -> drop. */
-export function tyreArrow(trackTempC: number): "↑" | "—" | "↓" {
-  if (trackTempC < 15) return "↑";
-  if (trackTempC > 38) return "↓";
-  return "—";
 }
 
 /** Best 2-hour window (highest average score) in the rest of the day. */

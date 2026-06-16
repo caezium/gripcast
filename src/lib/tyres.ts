@@ -39,10 +39,3 @@ export function coldPressure(brand: string, model: string, airTempC: number, asp
   const bar = base * interp(asphaltYears, ASPHALT_CURVE) * interp(gripPct, GRIP_CURVE) * interp(airTempC, TEMP_CURVE);
   return { bar, psi: bar * BAR_TO_PSI };
 }
-
-const ATM_PSI = 14.696;
-/** Gay-Lussac: hot pressure predicted from a cold set (fixed volume) */
-export function hotFromCold(pColdGaugePsi: number, tColdC: number, tHotC: number): number {
-  const cold = pColdGaugePsi + ATM_PSI;
-  return cold * ((tHotC + 273.15) / (tColdC + 273.15)) - ATM_PSI;
-}
