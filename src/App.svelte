@@ -22,11 +22,13 @@
   import SearchModal from "./components/SearchModal.svelte";
   import TrendsGraph from "./components/TrendsGraph.svelte";
   import RainTimeline from "./components/RainTimeline.svelte";
+  import Contribute from "./components/Contribute.svelte";
 
   $: tr = $trStore;
   $: tg = $tgStore;
 
   let searchOpen = false, quickOpen = false, detailsOpen = false, langOpen = false, timelineOpen = false, graphOpen = false;
+  let contribOpen = false;
   let quickPos = { left: 0, top: 0 }, detailsPos = { left: 0, top: 0 }, langPos = { left: 0, top: 0 };
   let placeEl: HTMLElement, condDetEl: HTMLElement, globeEl: HTMLElement, quickEl: HTMLElement, detailsEl: HTMLElement, langEl: HTMLElement;
   let searchComp: any;
@@ -178,7 +180,7 @@
   }
   function onKey(e: KeyboardEvent) {
     if (e.key === "/" && !searchOpen && (document.activeElement as HTMLElement)?.tagName !== "INPUT") { e.preventDefault(); openSearch(); }
-    if (e.key === "Escape") { searchOpen = false; quickOpen = false; detailsOpen = false; langOpen = false; myLapsOpen = false; }
+    if (e.key === "Escape") { searchOpen = false; quickOpen = false; detailsOpen = false; langOpen = false; myLapsOpen = false; contribOpen = false; }
   }
   function onBlurbClick(e: MouseEvent) { if ((e.target as HTMLElement).id === "blurbDet") toggleDetails(); }
   function toggleTimeline() { timelineOpen = !timelineOpen; }
@@ -370,6 +372,7 @@
     <div class="row" on:click={geoFromQuick} role="button" tabindex="0"><span class="ic">◎</span><span class="nm">{tr("nearMe")}</span></div>
     {#if $app.lat != null}<div class="row" on:click={shareLink} use:activate={shareLink} role="button" tabindex="0"><span class="ic">🔗</span><span class="nm">{SHARE_LABEL[$lang] || SHARE_LABEL.en}</span></div>{/if}
     {#if $app.data}<div class="row" on:click={openCompare} use:activate={openCompare} role="button" tabindex="0"><span class="ic">⇄</span><span class="nm">{COMPARE_LABEL[$lang] || COMPARE_LABEL.en}</span></div>{/if}
+    <div class="row" on:click={() => { quickOpen = false; contribOpen = true; }} role="button" tabindex="0"><span class="ic">📤</span><span class="nm">contribute laps</span></div>
     {#if $recentsStore.length}<div class="head">{tr("recent")}</div>{#each $recentsStore as r}<div class="row" on:click={() => pick(r)} role="button" tabindex="0"><span class="ic">◷</span><span class="nm">{r.name}</span></div>{/each}{/if}
     <div class="head">{tr("featured")}</div>{#each FEATURED.slice(0, 5) as f}<div class="row" on:click={() => pick(f)} role="button" tabindex="0"><span class="ic">🏁</span><span class="nm">{f.name}</span><span class="sub">{f.sub}</span></div>{/each}
   </div>
@@ -476,3 +479,4 @@
 {#if copied}<div class="toast">{COPIED_LABEL[$lang] || COPIED_LABEL.en}</div>{/if}
 
 <SearchModal bind:this={searchComp} open={searchOpen} pickMode={searchMode} on:select={onSelect} on:compare={onCompare} on:close={() => { searchOpen = false; searchMode = "select"; }} />
+<Contribute open={contribOpen} on:close={() => (contribOpen = false)} />

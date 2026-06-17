@@ -1,0 +1,18 @@
+name = "gripcast-contrib"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+# Raw uploaded .xrk files
+[[r2_buckets]]
+binding = "XRK_BUCKET"
+bucket_name = "gripcast-xrk"
+
+# Contribution metadata (one row per upload)
+[[d1_databases]]
+binding = "DB"
+database_name = "gripcast"
+database_id = "PASTE_DATABASE_ID_FROM_d1_create"
+
+[vars]
+# Lock to your site once deployed; "*" is fine for an open contribution endpoint.
+ALLOWED_ORIGIN = "*"
