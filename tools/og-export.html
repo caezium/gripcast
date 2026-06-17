@@ -1,0 +1,61 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>GripCast og:image export</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap" rel="stylesheet" />
+<style>
+  body { background: #0e0e16; color: #fff; font-family: Inter, system-ui, sans-serif; margin: 0; padding: 24px; text-align: center; }
+  canvas { width: 600px; max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 10px 40px #0008; }
+  button { margin-top: 16px; padding: 12px 22px; border: 0; border-radius: 10px; background: #34d488; color: #06210f; font: 700 15px Inter, sans-serif; cursor: pointer; }
+  p { color: #99a; font-size: 13px; line-height: 1.5; }
+  code { color: #cfe; }
+</style>
+<h2>GripCast — og:image (1200×630)</h2>
+<canvas id="c" width="1200" height="630"></canvas>
+<div><button id="dl">⬇ Download og.png</button></div>
+<p>Move the file to <code>public/og.png</code>, then rebuild &amp; redeploy.</p>
+<script>
+  const c = document.getElementById("c"), x = c.getContext("2d");
+  function rr(px, py, w, h, r) { x.beginPath(); x.moveTo(px + r, py); x.arcTo(px + w, py, px + w, py + h, r); x.arcTo(px + w, py + h, px, py + h, r); x.arcTo(px, py + h, px, py, r); x.arcTo(px, py, px + w, py, r); x.closePath(); }
+  function draw() {
+    const sky = x.createLinearGradient(0, 0, 0, 630);
+    sky.addColorStop(0, "#15162f"); sky.addColorStop(0.42, "#3a2a63"); sky.addColorStop(0.7, "#b04a7e"); sky.addColorStop(0.88, "#ff7c47"); sky.addColorStop(1, "#ffb361");
+    x.fillStyle = sky; x.fillRect(0, 0, 1200, 630);
+    const sun = x.createRadialGradient(960, 491, 0, 960, 491, 520);
+    sun.addColorStop(0, "rgba(255,225,171,.95)"); sun.addColorStop(0.38, "rgba(255,154,82,.32)"); sun.addColorStop(1, "rgba(255,154,82,0)");
+    x.fillStyle = sun; x.fillRect(0, 0, 1200, 630);
+    // horizon ribbon
+    x.fillStyle = "rgba(24,15,43,.6)";
+    x.beginPath(); x.moveTo(-20, 566); x.quadraticCurveTo(320, 506, 640, 544); x.quadraticCurveTo(960, 582, 1220, 524); x.lineTo(1220, 650); x.lineTo(-20, 650); x.closePath(); x.fill();
+    x.strokeStyle = "rgba(255,211,163,.55)"; x.lineWidth = 3; x.setLineDash([2, 26]); x.lineCap = "round";
+    x.beginPath(); x.moveTo(-20, 582); x.quadraticCurveTo(340, 524, 660, 560); x.quadraticCurveTo(980, 596, 1220, 546); x.stroke(); x.setLineDash([]);
+    // wordmark
+    x.fillStyle = "rgba(255,255,255,.14)"; rr(80, 68, 40, 40, 9); x.fill();
+    x.fillStyle = "#fff";
+    [[9, 9], [24, 9], [16.5, 16.5], [9, 24], [24, 24]].forEach(function (p) { x.fillRect(80 + p[0], 68 + p[1], 7.5, 7.5); });
+    x.textBaseline = "alphabetic"; x.textAlign = "left";
+    x.font = "800 40px Inter, sans-serif"; x.fillText("GripCast", 138, 100);
+    // headline
+    x.font = "800 78px Inter, sans-serif"; x.fillText("Is today good", 80, 312); x.fillText("for karting?", 80, 398);
+    x.fillStyle = "rgba(255,255,255,.82)"; x.font = "500 29px Inter, sans-serif";
+    x.fillText("Live weather → grip, pace & comfort — scored 0–10, any circuit.", 82, 452);
+    // gauge
+    const cx = 978, cy = 250, r = 116;
+    x.fillStyle = "rgba(13,10,28,.32)"; x.beginPath(); x.arc(cx, cy, 132, 0, 7); x.fill();
+    x.lineWidth = 14; x.lineCap = "round";
+    x.strokeStyle = "rgba(255,255,255,.16)"; x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.stroke();
+    const g = x.createLinearGradient(cx - r, cy - r, cx + r, cy + r); g.addColorStop(0, "#86f5a6"); g.addColorStop(1, "#34d488");
+    x.strokeStyle = g; x.beginPath(); x.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * 0.84); x.stroke();
+    x.textAlign = "center";
+    x.fillStyle = "#fff"; x.font = "800 92px Inter, sans-serif"; x.fillText("8.4", cx, cy + 30);
+    x.fillStyle = "#86f5a6"; x.font = "700 26px Inter, sans-serif"; x.fillText("/ 10", cx, cy + 74);
+    x.fillStyle = "rgba(255,255,255,.6)"; x.font = "700 19px Inter, sans-serif"; x.fillText("CONDITIONS", cx, cy - 40);
+    // footer
+    x.textAlign = "left"; x.fillStyle = "rgba(255,255,255,.95)"; x.font = "700 27px Inter, sans-serif"; x.fillText("grip.henryzh.dev", 80, 566);
+  }
+  document.getElementById("dl").onclick = function () {
+    c.toBlob(function (b) { const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "og.png"; a.click(); }, "image/png");
+  };
+  (async function () { try { await document.fonts.ready; await document.fonts.load("800 78px Inter"); await document.fonts.load("800 40px Inter"); } catch (e) {} draw(); })();
+</script>
