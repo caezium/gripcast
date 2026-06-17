@@ -11,7 +11,7 @@ bucket_name = "gripcast-xrk"
 [[d1_databases]]
 binding = "DB"
 database_name = "gripcast"
-database_id = "PASTE_DATABASE_ID_FROM_d1_create"
+database_id = "7f27c271-3878-4761-991b-cedad68072cc"
 
 [vars]
 # Lock to your site once deployed; "*" is fine for an open contribution endpoint.
